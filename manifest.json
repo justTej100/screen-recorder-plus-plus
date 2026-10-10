@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Screen Recorder Plus Plus",
+  "version": "0.1.0",
+  "description": "Record your screen, mic and face cam. EQ your audio, trim, and re-record sections. Everything stays on your computer.",
+  "minimum_chrome_version": "126",
+  "permissions": ["storage", "unlimitedStorage"],
+  "action": { "default_title": "Record" },
+  "background": { "service_worker": "background.js" }
+}

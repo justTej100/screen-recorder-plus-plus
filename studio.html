@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8"><title>Library · Screen Recorder Plus Plus</title>
+<link rel="stylesheet" href="style.css">
+<main>
+  <h1>Screen Recorder <span>++</span> Library</h1>
+  <p class="muted">Recordings are stored in this browser until you download them. Clearing site data deletes them.</p>
+  <div id="list"></div>
+  <section id="editor" hidden>
+    <h2>Editor</h2>
+    <video id="v" controls></video>
+    <div id="tl"></div><div class="muted" id="clock"></div>
+    <div class="tools">
+      <button id="setIn">Set start here</button><button id="setOut">Set end here</button><button id="reset">Reset trim</button>
+      <span id="trimInfo" class="muted"></span>
+    </div>
+    <div class="tools"><button id="muteBtn">Mute my voice from here</button></div>
+    <div id="mutes"></div>
+    <div id="recbar" class="row" hidden><span>Recording voiceover. Use headphones.</span><button id="stopvo">Stop</button></div>
+    <p><button id="export" class="primary">Export edited MP4</button> <span id="prog" class="muted"></span></p>
+    <p class="muted">Export plays the video in real time, so keep this tab open and visible until it finishes.</p>
+    <video id="xv" hidden controls></video>
+  </section>
+</main>
+<script type="module" src="studio.js"></script>
