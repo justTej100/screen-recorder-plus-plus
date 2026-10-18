@@ -44,7 +44,7 @@ async function start() {
   let screen, mic = null, cam = null;
   try {
     screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true });
-    if ($('#mic').checked) mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } });
+    if ($('#mic').checked) mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: $('#ns').checked, autoGainControl: false, channelCount: 1, sampleRate: 48000 } });
     if ($('#cam').checked) cam = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
   } catch (e) { screen?.getTracks().forEach(t => t.stop()); mic?.getTracks().forEach(t => t.stop()); return say('Couldn’t start: ' + e.message); }
 
@@ -64,12 +64,12 @@ async function start() {
   };
   ticker.postMessage({ t: 'tick' });
 
-  const ctx = new AudioContext(), A = buildAudio(ctx, mic, screen.getAudioTracks());
+  const ctx = new AudioContext({ sampleRate: 48000, latencyHint: 'playback' }), A = buildAudio(ctx, mic, screen.getAudioTracks());
   const id = Date.now().toString(36), t0 = Date.now();
   const m = { id, title: 'Recording ' + new Date().toLocaleString(), created: t0, dur: 0, status: 'recording', tracks: {} };
   const rs = [];
   const mk = (kind, stream, audio) => {
-    const name = `${id}.${kind}.mp4`, w = writer(name), r = new MediaRecorder(stream, { mimeType: mp4(audio) });
+    const name = `${id}.${kind}.mp4`, w = writer(name), r = new MediaRecorder(stream, { mimeType: mp4(audio), audioBitsPerSecond: 192000, ...(audio ? {} : { videoBitsPerSecond: 8e6 }) });
     r.ondataavailable = e => e.data.size && w.write(e.data);
     const done = new Promise(res => r.onstop = res);
     m.tracks[kind] = name; rs.push({ r, w, done }); r.start(2000);
@@ -90,7 +90,7 @@ async function start() {
   }, 100);
   S = { m, rs, iv, ticker, ctx, streams: [screen, mic, cam], t0 };
   vt.onended = stop;
-  $('#rec').textContent = 'Stop recording'; say('Recording. You can switch to another tab or window. Stop here or with the browser’s “Stop sharing” bar.');
+  $('#rec').textContent = 'Stop recording'; say('Recording (wear headphones if you share audio, since echo cancellation is off). You can switch to another tab or window. Stop here or with the browser’s “Stop sharing” bar.');
   chrome.runtime.sendMessage({ rec: true });
 }
 

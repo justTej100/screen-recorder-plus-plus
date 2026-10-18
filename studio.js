@@ -52,7 +52,7 @@ v.onseeked = () => E && Object.values(E.aud).forEach(a => a.currentTime = v.curr
 function tick() {
   if (!E || E.exp) return;
   const t = v.currentTime, play = !v.paused;
-  for (const a of Object.values(E.aud)) if (Math.abs(a.currentTime - t) > .2) a.currentTime = t;
+  for (const a of Object.values(E.aud)) if (Math.abs(a.currentTime - t) > .5) a.currentTime = t;
   if (E.aud.mic) E.aud.mic.volume = inMute(t) ? 0 : 1;
   if (!E.rec) E.mutes.forEach(mu => mu.a && voStep(t, play, mu, mu.a));
   if (E.rec && t >= E.rec.e) E.rec.stop(); else if (play && t >= E.trim[1]) v.pause();
@@ -86,9 +86,9 @@ $('#muteBtn').onclick = () => {
 
 async function recordOver(mu) {
   if (E.rec || E.exp) return;
-  let mic; try { mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+  let mic; try { mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: false, channelCount: 1, sampleRate: 48000 } }); }
   catch (e) { return alert('Microphone unavailable: ' + e.message); }
-  const r = new MediaRecorder(mic, { mimeType: mp4(true) }), ch = [];
+  const r = new MediaRecorder(mic, { mimeType: mp4(true), audioBitsPerSecond: 192000 }), ch = [];
   r.ondataavailable = e => ch.push(e.data);
   r.onstop = () => {
     mic.getTracks().forEach(t => t.stop()); v.pause();
@@ -107,12 +107,12 @@ $('#export').onclick = async () => {
   const [a, b] = E.trim, { m } = E, xv = $('#xv'), xb = $('#export');
   E.exp = true; xb.disabled = true; v.pause();
   xv.hidden = false; xv.muted = true; xv.src = E.urls.main; await new Promise(r => xv.onloadedmetadata = r);
-  const ac = new AudioContext(), dest = ac.createMediaStreamDestination();
+  const ac = new AudioContext({ sampleRate: 48000, latencyHint: 'playback' }), dest = ac.createMediaStreamDestination();
   const wire = url => { const el = new Audio(url), g = ac.createGain(); ac.createMediaElementSource(el).connect(g).connect(dest); return [el, g]; };
   const tr = [E.urls.mic, E.urls.sys].filter(Boolean).map(wire), micG = E.urls.mic ? tr[0][1] : null;
   const vos = E.mutes.filter(x => x.vo).map(mu => [mu, wire(URL.createObjectURL(mu.vo))[0]]);
   const id = Date.now().toString(36), name = id + '.main.mp4', w = writer(name);
-  const rc = new MediaRecorder(new MediaStream([...xv.captureStream().getVideoTracks(), ...dest.stream.getAudioTracks()]), { mimeType: mp4() });
+  const rc = new MediaRecorder(new MediaStream([...xv.captureStream().getVideoTracks(), ...dest.stream.getAudioTracks()]), { mimeType: mp4(), audioBitsPerSecond: 192000, videoBitsPerSecond: 8e6 });
   rc.ondataavailable = e => e.data.size && w.write(e.data);
   const done = new Promise(r => rc.onstop = r);
   if (a > .05) { xv.currentTime = a; await new Promise(r => xv.onseeked = r); }
@@ -127,7 +127,7 @@ $('#export').onclick = async () => {
   };
   const iv = setInterval(() => {
     const t = xv.currentTime;
-    tr.forEach(([el]) => { if (Math.abs(el.currentTime - t) > .25) el.currentTime = t; });
+    tr.forEach(([el]) => { if (Math.abs(el.currentTime - t) > .5) el.currentTime = t; });
     if (micG) micG.gain.value = inMute(t) ? 0 : 1;
     vos.forEach(([mu, el]) => voStep(t, true, mu, el));
     $('#prog').textContent = `Exporting ${fmt(t - a)} / ${fmt(b - a)}`;
