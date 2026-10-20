@@ -3,6 +3,14 @@ const $ = s => document.querySelector(s), say = t => $('#msg').textContent = t;
 const PRE = { 'Clear voice': [-2, 3, 2, 90], Podcast: [3, 2, 1, 80], 'Reduce room': [-5, 1, 0, 120], Flat: [0, 0, 0, 60] };
 const BANDS = ['low', 'mid', 'high'];
 let filt, hpHz = 90, S = null;
+const setFav = rec => {   // red tab icon + title while recording, so it's obvious in the tab strip
+  const l = document.querySelector('link[rel=icon]') || document.head.appendChild(Object.assign(document.createElement('link'), { rel: 'icon' }));
+  const g = Object.assign(document.createElement('canvas'), { width: 32, height: 32 }).getContext('2d');
+  g.fillStyle = rec ? '#d9372f' : '#1b1b1f'; g.beginPath(); g.arc(16, 16, 15, 0, 7); g.fill();
+  if (!rec) { g.fillStyle = '#d9372f'; g.beginPath(); g.arc(16, 16, 7, 0, 7); g.fill(); }
+  l.href = g.canvas.toDataURL();
+};
+setFav(false);
 
 $('#preset').innerHTML = Object.keys(PRE).map(k => `<option>${k}</option>`).join('');
 const eq = () => filt && BANDS.forEach(k => filt[k].gain.value = +$('#' + k).value);
@@ -81,7 +89,7 @@ async function start() {
 
   const buf = new Float32Array(1024);
   const iv = setInterval(() => {
-    $('#t').textContent = fmt((Date.now() - t0) / 1000);
+    const el = fmt((Date.now() - t0) / 1000); $('#t').textContent = el; document.title = '● Recording ' + el;
     if (!A.an) return;
     A.an.getFloatTimeDomainData(buf);
     let pk = 0, sq = 0; for (const x of buf) { pk = Math.max(pk, Math.abs(x)); sq += x * x; }
@@ -91,7 +99,7 @@ async function start() {
   S = { m, rs, iv, ticker, ctx, streams: [screen, mic, cam], t0 };
   vt.onended = stop;
   $('#rec').textContent = 'Stop recording'; say('Recording (wear headphones if you share audio, since echo cancellation is off). You can switch to another tab or window. Stop here or with the browser’s “Stop sharing” bar.');
-  chrome.runtime.sendMessage({ rec: true });
+  chrome.runtime.sendMessage({ rec: true }); setFav(true);
 }
 
 async function stop() {
@@ -100,7 +108,7 @@ async function stop() {
   await Promise.all(s.rs.map(async x => { if (x.r.state !== 'inactive') x.r.stop(); await x.done; await x.w.close(); }));
   s.streams.forEach(st => st?.getTracks().forEach(t => t.stop())); s.ctx.close();
   s.m.dur = (Date.now() - s.t0) / 1000; s.m.status = 'done'; await meta.set(s.m);
-  chrome.runtime.sendMessage({ rec: false });
+  chrome.runtime.sendMessage({ rec: false }); setFav(false); document.title = 'Screen Recorder Plus Plus';
   $('#rec').textContent = 'Start recording'; $('#lvl').style.width = 0;
   say(`Saved (${fmt(s.m.dur)}). Open the library to edit or download it. It isn’t on your disk until you download it.`);
 }
