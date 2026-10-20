@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>Screen Recorder Plus Plus</title>
+<link rel="icon" href="icons/icon-32.png">
+<link rel="stylesheet" href="style.css">
+<main>
+  <h1>Screen Recorder <span>++</span></h1>
+  <label><input type="checkbox" id="mic" checked> Microphone</label>
+  <label><input type="checkbox" id="ns" checked> Reduce background noise</label>
+  <label><input type="checkbox" id="cam"> Face cam bubble</label>
+  <p class="muted">In the share picker, tick “Share audio” to also capture system or tab audio.</p>
+  <h2>Mic sound</h2>
+  <select id="preset"></select>
+  <div class="eq">
+    <label>Bass <input type="range" id="low" min="-12" max="12" value="0"></label>
+    <label>Mid <input type="range" id="mid" min="-12" max="12" value="0"></label>
+    <label>Treble <input type="range" id="high" min="-12" max="12" value="0"></label>
+  </div>
+  <div class="meter"><b id="lvl"></b></div>
+  <button id="rec" class="primary">Start recording</button> <span id="t"></span>
+  <p id="msg" class="muted"></p>
+  <p><a href="studio.html" target="_blank">Open library and editor</a></p>
+</main>
+<script type="module" src="recorder.js"></script>

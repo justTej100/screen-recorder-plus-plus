@@ -1,22 +1,8 @@
 const REC = chrome.runtime.getURL('recorder.html');
 
-// Draw the toolbar icon in code: dark square with a red dot when idle, solid red with a stop square when recording
-function icon(rec) {
-  const imageData = {};
-  for (const s of [16, 32, 48, 128]) {
-    const g = new OffscreenCanvas(s, s).getContext('2d');
-    g.fillStyle = rec ? '#d9372f' : '#1b1b1f';
-    g.beginPath(); g.roundRect(0, 0, s, s, s * .22); g.fill();
-    if (rec) { g.fillStyle = '#fff'; g.fillRect(s * .3, s * .3, s * .4, s * .4); }
-    else { g.fillStyle = '#d9372f'; g.beginPath(); g.arc(s / 2, s / 2, s * .26, 0, 7); g.fill(); }
-    imageData[s] = g.getImageData(0, 0, s, s);
-  }
-  chrome.action.setIcon({ imageData });
-}
+const paths = r => Object.fromEntries([16, 32, 48, 128].map(s => [s, `icons/${r ? 'rec' : 'icon'}-${s}.png`]));
 function setState(rec, tabId) {
-  icon(rec);
-  chrome.action.setBadgeText({ text: rec ? 'REC' : '' });
-  chrome.action.setBadgeBackgroundColor({ color: '#d9372f' });
+  chrome.action.setIcon({ path: paths(rec) });
   chrome.action.setTitle({ title: rec ? 'Recording. Click to go back to the recorder.' : 'Record' });
   if (rec) chrome.storage.session.set({ recTab: tabId }); else chrome.storage.session.remove('recTab');
 }

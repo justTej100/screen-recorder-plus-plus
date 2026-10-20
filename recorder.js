@@ -3,12 +3,9 @@ const $ = s => document.querySelector(s), say = t => $('#msg').textContent = t;
 const PRE = { 'Clear voice': [-2, 3, 2, 90], Podcast: [3, 2, 1, 80], 'Reduce room': [-5, 1, 0, 120], Flat: [0, 0, 0, 60] };
 const BANDS = ['low', 'mid', 'high'];
 let filt, hpHz = 90, S = null;
-const setFav = rec => {   // red tab icon + title while recording, so it's obvious in the tab strip
+const setFav = rec => {   // tab icon swaps to the recording version while recording
   const l = document.querySelector('link[rel=icon]') || document.head.appendChild(Object.assign(document.createElement('link'), { rel: 'icon' }));
-  const g = Object.assign(document.createElement('canvas'), { width: 32, height: 32 }).getContext('2d');
-  g.fillStyle = rec ? '#d9372f' : '#1b1b1f'; g.beginPath(); g.arc(16, 16, 15, 0, 7); g.fill();
-  if (!rec) { g.fillStyle = '#d9372f'; g.beginPath(); g.arc(16, 16, 7, 0, 7); g.fill(); }
-  l.href = g.canvas.toDataURL();
+  l.href = rec ? 'icons/rec-32.png' : 'icons/icon-32.png';
 };
 setFav(false);
 
