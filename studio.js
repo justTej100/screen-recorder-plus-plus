@@ -32,7 +32,7 @@ function closeEditor() {
 async function edit(m) {
   closeEditor();
   const urls = {}; for (const [k, n] of Object.entries(m.tracks)) urls[k] = URL.createObjectURL(await getFile(n));
-  E = { m, urls, dur: m.dur || 1, trim: [0, m.dur || 1], mutes: [], aud: {} };
+  E = { m, urls, dur: m.dur || 1, trim: [0, m.dur || 1], mutes: [], aud: {}, vol: +$('#volume').value };
   for (const k of ['mic', 'sys']) if (urls[k]) E.aud[k] = new Audio(urls[k]);
   v.src = urls.main; v.muted = true; $('#editor').hidden = false; muteStart = null;
   v.onloadedmetadata = () => { if (isFinite(v.duration) && v.duration > 0) { E.dur = v.duration; E.trim = [0, E.dur]; } render(); };
@@ -40,21 +40,36 @@ async function edit(m) {
 }
 
 const inMute = t => E.mutes.some(m => t >= m.s && t < m.e);
-const voStep = (t, play, mu, el) => {
+const voStep = (t, play, mu, el, vol = 1) => {
+  el.volume = vol;
   const on = play && t >= mu.s && t < mu.e;
   if (on && el.paused) { el.currentTime = t - mu.s; el.play(); } else if (!on && !el.paused) el.pause();
 };
-v.onvolumechange = () => { v.muted = true; };          // the original mixed audio is never played in the editor
-v.onplay = () => E && Object.values(E.aud).forEach(a => a.play());
-v.onpause = () => E && Object.values(E.aud).forEach(a => a.pause());
+const ICON = {
+  play: '<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>',
+  vol: '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  mute: '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+};
+// The video element stays silent (the editor plays the separate mic/system tracks), so it has no native controls.
+// Our own play and volume controls drive those tracks instead.
+const setPlay = () => { $('#play').innerHTML = v.paused ? ICON.play : ICON.pause; $('#play').setAttribute('aria-label', v.paused ? 'Play' : 'Pause'); };
+$('#play').onclick = v.onclick = () => v.paused ? v.play() : v.pause();
+let lastVol = 1;
+$('#volume').oninput = () => { const x = +$('#volume').value; if (E) E.vol = x; $('#vol').innerHTML = x ? ICON.vol : ICON.mute; };
+$('#vol').onclick = () => { const i = $('#volume'); if (+i.value) { lastVol = +i.value; i.value = 0; } else i.value = lastVol; i.oninput(); };
+setPlay(); $('#volume').oninput();
+v.onplay = () => { setPlay(); E && Object.values(E.aud).forEach(a => a.play()); };
+v.onpause = () => { setPlay(); E && Object.values(E.aud).forEach(a => a.pause()); };
 v.onseeked = () => E && Object.values(E.aud).forEach(a => a.currentTime = v.currentTime);
 
 function tick() {
   if (!E || E.exp) return;
   const t = v.currentTime, play = !v.paused;
   for (const a of Object.values(E.aud)) if (Math.abs(a.currentTime - t) > .5) a.currentTime = t;
-  if (E.aud.mic) E.aud.mic.volume = inMute(t) ? 0 : 1;
-  if (!E.rec) E.mutes.forEach(mu => mu.a && voStep(t, play, mu, mu.a));
+  if (E.aud.mic) E.aud.mic.volume = inMute(t) ? 0 : E.vol;
+  if (E.aud.sys) E.aud.sys.volume = E.vol;
+  if (!E.rec) E.mutes.forEach(mu => mu.a && voStep(t, play, mu, mu.a, E.vol));
   if (E.rec && t >= E.rec.e) E.rec.stop(); else if (play && t >= E.trim[1]) v.pause();
   const h = $('#hd'); if (h) h.style.left = t / E.dur * 100 + '%';
   $('#clock').textContent = `${fmt(t)} / ${fmt(E.dur)}`;

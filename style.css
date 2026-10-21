@@ -1,24 +1,38 @@
-:root{--bg:#fbfbfa;--fg:#1b1b1f;--mut:#6c6c75;--card:#f0f0ee;--line:#d9d9d5;--acc:#d9372f;--ok:#2a9d5c;color-scheme:light dark}
-@media(prefers-color-scheme:dark){:root{--bg:#141417;--fg:#ececef;--mut:#9b9ba5;--card:#1e1e23;--line:#2e2e35}}
+:root{color-scheme:light}
 [hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}
-main{max-width:760px;margin:0 auto;padding:28px 20px 60px}
-h1{font-size:22px;margin:0 0 14px}h1 span{color:var(--acc)}
-h2{font-size:15px;margin:26px 0 8px}
-label{display:block;margin:6px 0}
-a{color:inherit}
-.muted{color:var(--mut);font-size:13px}
-button,select{font:inherit;padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
-button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-button.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600;padding:10px 22px}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:#000;font:15px/1.5 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 20px 70px}
+h1{font-size:24px;margin:0 0 18px;letter-spacing:-.01em}
+h2{font-size:13px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.08em}
+fieldset{border:0;margin:0;padding:0}
+label{display:block;margin:7px 0}
+a{color:#000;text-underline-offset:3px}
+input[type=checkbox]{accent-color:#000;width:16px;height:16px;vertical-align:-3px;margin-right:8px}
+input[type=range]{accent-color:#000}
+.muted{font-size:13px}
+button,select{font:inherit;padding:8px 14px;border-radius:8px;border:2px solid #000;background:#fff;color:#000;cursor:pointer}
+button:hover:not(:disabled){background:#000;color:#fff}
+button:disabled{border-style:dashed;cursor:not-allowed}
+:focus-visible{outline:3px solid #000;outline-offset:3px}
+button.primary{background:#000;color:#fff;font-weight:700;padding:11px 24px}
+button.primary:hover:not(:disabled){background:#fff;color:#000}
 .eq{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:12px 0}.eq input{width:100%}
-.meter{height:8px;background:var(--card);border-radius:4px;overflow:hidden;margin:12px 0 18px}
-.meter b{display:block;height:100%;width:0;background:var(--ok)}.meter b.clip{background:var(--acc)}
-.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border-radius:10px;margin:8px 0}
+.meter{height:12px;border:2px solid #000;border-radius:6px;overflow:hidden;margin:14px 0 6px}
+.meter b{display:block;height:100%;width:0;background:#000}
+.meter b.clip{background:repeating-linear-gradient(45deg,#000 0 4px,#fff 4px 8px)}
+#big{font:700 56px/1.1 ui-monospace,monospace;font-variant-numeric:tabular-nums;margin:20px 0 2px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border:2px solid #000;border-radius:10px;margin:10px 0}
 .row>div:last-child{display:flex;gap:6px;flex-wrap:wrap}
-video{width:100%;border-radius:10px;background:#000}
-#tl{position:relative;height:30px;background:var(--card);border-radius:6px;margin:10px 0 4px;cursor:pointer;overflow:hidden}
+video{width:100%;border:2px solid #000;border-radius:10px;background:#000;cursor:pointer}
+#tl{position:relative;height:34px;border:2px solid #000;border-radius:6px;margin:10px 0 6px;cursor:pointer;overflow:hidden;background:#fff}
 #tl i{position:absolute;top:0;bottom:0}
-#tl .trim{background:rgba(70,110,240,.3)}#tl .mute{background:rgba(217,55,47,.6)}#tl .mute.vo{background:rgba(42,157,92,.65)}
-#tl .head{width:2px;background:var(--fg)}
-.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+#tl .trim{background:radial-gradient(#000 1px,transparent 1.4px) 0 0/6px 6px}
+#tl .mute{background:repeating-linear-gradient(45deg,#000 0 3px,#fff 3px 6px);border:solid #000;border-width:0 2px}
+#tl .mute.vo{background:#000}
+#tl .head{width:3px;background:#000;box-shadow:0 0 0 1px #fff}
+.player{display:flex;align-items:center;gap:10px;margin:6px 0}
+.player .sp{flex:1}.player input{width:120px}
+.player button{padding:6px 10px;display:grid;place-items:center}
+.player svg{width:20px;height:20px;fill:currentColor}

@@ -1,8 +1,9 @@
-import { writer, mp4, meta, fmt } from './shared.js';
+import { writer, mp4, meta, fmt, root } from './shared.js';
 const $ = s => document.querySelector(s), say = t => $('#msg').textContent = t;
 const PRE = { 'Clear voice': [-2, 3, 2, 90], Podcast: [3, 2, 1, 80], 'Reduce room': [-5, 1, 0, 120], Flat: [0, 0, 0, 60] };
 const BANDS = ['low', 'mid', 'high'];
 let filt, hpHz = 90, S = null;
+
 const setFav = rec => {   // tab icon swaps to the recording version while recording
   const l = document.querySelector('link[rel=icon]') || document.head.appendChild(Object.assign(document.createElement('link'), { rel: 'icon' }));
   l.href = rec ? 'icons/rec-32.png' : 'icons/icon-32.png';
@@ -41,10 +42,22 @@ function buildAudio(ctx, mic, sysTracks) {
   return out;
 }
 
-$('#rec').onclick = () => S ? stop() : start();
+// Elapsed time excludes paused time. The same numbers go to the on-screen bar (overlay.js) via storage.
+const elapsed = () => S.accum + (S.paused ? 0 : (Date.now() - S.last) / 1000);
+const publish = () => chrome.storage.local.set({ live: { status: S.paused ? 'paused' : 'recording', accum: S.accum, last: S.last, overlay: S.overlay } });
+
+$('#rec').onclick = start;
+$('#pause').onclick = () => pause(!S.paused);
+$('#stop').onclick = stop;
+$('#cancel').onclick = () => confirm('Discard this recording? It can’t be recovered.') && cancel();
+$('#restart').onclick = () => confirm('Discard this take and start over?') && restart();
+chrome.runtime.onMessage.addListener(m => {
+  if (S && m.cmd) ({ pause: () => pause(true), resume: () => pause(false), toggle: () => pause(!S.paused), stop, cancel, restart })[m.cmd]?.();
+});
 onbeforeunload = e => { if (S) e.preventDefault(); };
 
 async function start() {
+  if (S) return;
   if (!mp4()) return say('This browser can’t record MP4. Update Chrome, Brave or Edge.');
   let screen, mic = null, cam = null;
   try {
@@ -68,44 +81,81 @@ async function start() {
     }
   };
   ticker.postMessage({ t: 'tick' });
-
   const ctx = new AudioContext({ sampleRate: 48000, latencyHint: 'playback' }), A = buildAudio(ctx, mic, screen.getAudioTracks());
-  const id = Date.now().toString(36), t0 = Date.now();
-  const m = { id, title: 'Recording ' + new Date().toLocaleString(), created: t0, dur: 0, status: 'recording', tracks: {} };
-  const rs = [];
-  const mk = (kind, stream, audio) => {
-    const name = `${id}.${kind}.mp4`, w = writer(name), r = new MediaRecorder(stream, { mimeType: mp4(audio), audioBitsPerSecond: 192000, ...(audio ? {} : { videoBitsPerSecond: 8e6 }) });
-    r.ondataavailable = e => e.data.size && w.write(e.data);
-    const done = new Promise(res => r.onstop = res);
-    m.tracks[kind] = name; rs.push({ r, w, done }); r.start(2000);
-  };
-  mk('main', new MediaStream([...cvs.captureStream(30).getVideoTracks(), ...A.mix.stream.getAudioTracks()]), false);
-  if (A.mic) mk('mic', A.mic.stream, true);   // processed mic on its own track, for the editor
-  if (A.sys) mk('sys', A.sys.stream, true);   // system audio on its own track
-  await meta.set(m);
-
-  const buf = new Float32Array(1024);
-  const iv = setInterval(() => {
-    const el = fmt((Date.now() - t0) / 1000); $('#t').textContent = el; document.title = '● Recording ' + el;
-    if (!A.an) return;
-    A.an.getFloatTimeDomainData(buf);
-    let pk = 0, sq = 0; for (const x of buf) { pk = Math.max(pk, Math.abs(x)); sq += x * x; }
-    $('#lvl').style.width = Math.min(100, Math.sqrt(sq / buf.length) * 300) + '%';
-    $('#lvl').className = pk > .98 ? 'clip' : '';
-  }, 100);
-  S = { m, rs, iv, ticker, ctx, streams: [screen, mic, cam], t0 };
+  S = { screen, mic, cam, ctx, A, ticker, vtrack: cvs.captureStream(30).getVideoTracks()[0], overlay: $('#ovl').checked, rs: [], m: null, accum: 0, last: 0, paused: false, busy: false, iv: 0 };
   vt.onended = stop;
-  $('#rec').textContent = 'Stop recording'; say('Recording (wear headphones if you share audio, since echo cancellation is off). You can switch to another tab or window. Stop here or with the browser’s “Stop sharing” bar.');
+  await begin();
+  $('#rec').hidden = true; $('#ctl').hidden = false; $('#setup').disabled = true;
+  S.iv = setInterval(tickUI, 100); tickUI();
+  say('Recording. Switch to what you want to show. Control it from the on-screen bar, the shortcuts, or this tab.');
   chrome.runtime.sendMessage({ rec: true }); setFav(true);
 }
 
+// Start a fresh take on the streams we already have (used by start and restart)
+async function begin() {
+  const id = Date.now().toString(36);
+  const m = { id, title: 'Recording ' + new Date().toLocaleString(), created: Date.now(), dur: 0, status: 'recording', tracks: {} };
+  S.m = m; S.rs = [];
+  const mk = (kind, stream, audio) => {
+    const name = `${id}.${kind}.mp4`, w = writer(name);
+    const r = new MediaRecorder(stream, { mimeType: mp4(audio), audioBitsPerSecond: 192000, ...(audio ? {} : { videoBitsPerSecond: 8e6 }) });
+    r.ondataavailable = e => e.data.size && w.write(e.data);
+    const done = new Promise(res => r.onstop = res);
+    m.tracks[kind] = name; S.rs.push({ r, w, done }); r.start(2000);
+  };
+  mk('main', new MediaStream([S.vtrack, ...S.A.mix.stream.getAudioTracks()]), false);
+  if (S.A.mic) mk('mic', S.A.mic.stream, true);   // processed mic on its own track, for the editor
+  if (S.A.sys) mk('sys', S.A.sys.stream, true);   // system audio on its own track
+  S.accum = 0; S.last = Date.now(); S.paused = false;
+  await meta.set(m); publish();
+}
+
+const finishRecorders = () => Promise.all(S.rs.map(async x => { if (x.r.state !== 'inactive') x.r.stop(); await x.done; await x.w.close(); }));
+async function discard() {
+  await finishRecorders(); const r = await root();
+  for (const n of Object.values(S.m.tracks)) await r.removeEntry(n).catch(() => {});
+  await meta.del(S.m.id);
+}
+function teardown() {
+  clearInterval(S.iv); S.ticker.terminate();
+  [S.screen, S.mic, S.cam].forEach(st => st?.getTracks().forEach(t => t.stop())); S.ctx.close();
+  chrome.storage.local.remove('live'); chrome.runtime.sendMessage({ rec: false });
+  setFav(false); document.title = 'Screen Recorder Plus Plus';
+  $('#rec').hidden = false; $('#ctl').hidden = true; $('#setup').disabled = false;
+  $('#lvl').style.width = 0; $('#lvl').className = ''; $('#clip').hidden = true; S = null;
+}
+
+function pause(on) {
+  if (!S || S.busy || on === S.paused) return;
+  S.accum = elapsed(); S.last = Date.now(); S.paused = on;
+  S.rs.forEach(x => on ? x.r.pause() : x.r.resume());
+  publish(); tickUI();
+}
 async function stop() {
-  if (!S) return; const s = S; S = null;
-  clearInterval(s.iv); s.ticker.terminate();
-  await Promise.all(s.rs.map(async x => { if (x.r.state !== 'inactive') x.r.stop(); await x.done; await x.w.close(); }));
-  s.streams.forEach(st => st?.getTracks().forEach(t => t.stop())); s.ctx.close();
-  s.m.dur = (Date.now() - s.t0) / 1000; s.m.status = 'done'; await meta.set(s.m);
-  chrome.runtime.sendMessage({ rec: false }); setFav(false); document.title = 'Screen Recorder Plus Plus';
-  $('#rec').textContent = 'Start recording'; $('#lvl').style.width = 0;
-  say(`Saved (${fmt(s.m.dur)}). Open the library to edit or download it. It isn’t on your disk until you download it.`);
+  if (!S || S.busy) return; S.busy = true;
+  const s = S, dur = elapsed();
+  await finishRecorders(); s.m.dur = dur; s.m.status = 'done'; await meta.set(s.m);
+  teardown(); say(`Saved (${fmt(dur)}). Open the library to edit or download it. It isn’t on your disk until you download it.`);
+}
+async function cancel() {
+  if (!S || S.busy) return; S.busy = true;
+  await discard(); teardown(); say('Recording discarded.');
+}
+async function restart() {
+  if (!S || S.busy) return; S.busy = true;
+  await discard(); await begin(); S.busy = false; tickUI(); say('Started over.');
+}
+
+const buf = new Float32Array(1024);
+function tickUI() {
+  if (!S) return;
+  const e = fmt(elapsed());
+  $('#big').textContent = e; $('#state').textContent = S.paused ? 'Paused' : 'Recording';
+  $('#pause').textContent = S.paused ? 'Resume' : 'Pause';
+  document.title = (S.paused ? '❚❚ Paused ' : '● Recording ') + e;
+  if (!S.A.an) return;
+  S.A.an.getFloatTimeDomainData(buf);
+  let pk = 0, sq = 0; for (const x of buf) { pk = Math.max(pk, Math.abs(x)); sq += x * x; }
+  $('#lvl').style.width = Math.min(100, Math.sqrt(sq / buf.length) * 300) + '%';
+  $('#lvl').className = pk > .98 ? 'clip' : ''; $('#clip').hidden = pk <= .98;
 }

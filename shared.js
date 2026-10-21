@@ -1,4 +1,4 @@
-export const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+export const fmt = t => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60); return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(t % 60).padStart(2, '0'); };
 export const root = () => navigator.storage.getDirectory();
 export const getFile = async n => (await (await root()).getFileHandle(n)).getFile();
 export const mp4 = audio => (audio

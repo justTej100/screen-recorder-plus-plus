@@ -7,8 +7,13 @@
   <div id="list"></div>
   <section id="editor" hidden>
     <h2>Editor</h2>
-    <video id="v" controls></video>
-    <div id="tl"></div><div class="muted" id="clock"></div>
+    <video id="v"></video>
+    <div id="tl"></div>
+    <p class="muted">Dotted = kept · hatched = your voice muted · solid = voiceover recorded</p>
+    <div class="player">
+      <button id="play" aria-label="Play"></button><span id="clock" class="muted"></span><span class="sp"></span>
+      <button id="vol" aria-label="Mute or unmute"></button><input type="range" id="volume" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+    </div>
     <div class="tools">
       <button id="setIn">Set start here</button><button id="setOut">Set end here</button><button id="reset">Reset trim</button>
       <span id="trimInfo" class="muted"></span>
@@ -18,7 +23,7 @@
     <div id="recbar" class="row" hidden><span>Recording voiceover. Use headphones.</span><button id="stopvo">Stop</button></div>
     <p><button id="export" class="primary">Export edited MP4</button> <span id="prog" class="muted"></span></p>
     <p class="muted">Export plays the video in real time, so keep this tab open and visible until it finishes.</p>
-    <video id="xv" hidden controls></video>
+    <video id="xv" hidden></video>
   </section>
 </main>
 <script type="module" src="studio.js"></script>

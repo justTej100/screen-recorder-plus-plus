@@ -2,20 +2,32 @@
 <link rel="icon" href="icons/icon-32.png">
 <link rel="stylesheet" href="style.css">
 <main>
-  <h1>Screen Recorder <span>++</span></h1>
-  <label><input type="checkbox" id="mic" checked> Microphone</label>
-  <label><input type="checkbox" id="ns" checked> Reduce background noise</label>
-  <label><input type="checkbox" id="cam"> Face cam bubble</label>
+  <h1>Screen Recorder ++</h1>
+  <fieldset id="setup">
+    <label><input type="checkbox" id="mic" checked> Microphone</label>
+    <label><input type="checkbox" id="ns" checked> Reduce background noise</label>
+    <label><input type="checkbox" id="cam"> Face cam bubble</label>
+    <label><input type="checkbox" id="ovl" checked> On-screen controls (they appear in the video if you capture that tab or screen)</label>
+  </fieldset>
   <p class="muted">In the share picker, tick “Share audio” to also capture system or tab audio.</p>
   <h2>Mic sound</h2>
-  <select id="preset"></select>
+  <select id="preset" aria-label="Mic preset"></select>
   <div class="eq">
     <label>Bass <input type="range" id="low" min="-12" max="12" value="0"></label>
     <label>Mid <input type="range" id="mid" min="-12" max="12" value="0"></label>
     <label>Treble <input type="range" id="high" min="-12" max="12" value="0"></label>
   </div>
   <div class="meter"><b id="lvl"></b></div>
-  <button id="rec" class="primary">Start recording</button> <span id="t"></span>
+  <p id="clip" class="muted" hidden><b>CLIPPING:</b> lower your mic level</p>
+  <button id="rec" class="primary">Start recording</button>
+  <div id="ctl" hidden>
+    <div id="big">0:00</div>
+    <div id="state" class="muted">Recording</div>
+    <div class="tools">
+      <button id="pause">Pause</button><button id="restart">Restart</button><button id="cancel">Cancel</button><button id="stop" class="primary">Stop and save</button>
+    </div>
+    <p class="muted">Shortcuts anywhere: Alt+Shift+P pause or resume, Alt+Shift+S stop.</p>
+  </div>
   <p id="msg" class="muted"></p>
   <p><a href="studio.html" target="_blank">Open library and editor</a></p>
 </main>
