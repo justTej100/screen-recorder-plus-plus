@@ -8,7 +8,10 @@ function setState(rec, tabId) {
   else { chrome.storage.session.remove('recTab'); chrome.storage.local.remove('live'); }
 }
 
-chrome.runtime.onInstalled.addListener(() => setState(false));
+// Pages that were already open when the extension was installed or reloaded don't get the fallback bar by themselves
+const injectAll = () => chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] })
+  .then(tabs => tabs.forEach(t => chrome.scripting.executeScript({ target: { tabId: t.id }, files: ['overlay.js'] }).catch(() => {}))).catch(() => {});
+chrome.runtime.onInstalled.addListener(() => { setState(false); injectAll(); });
 chrome.runtime.onStartup.addListener(() => setState(false));
 
 chrome.action.onClicked.addListener(async () => {
@@ -17,7 +20,7 @@ chrome.action.onClicked.addListener(async () => {
   else chrome.tabs.create({ url: REC });
 });
 chrome.commands.onCommand.addListener(c => chrome.runtime.sendMessage({ cmd: c === 'toggle-pause' ? 'toggle' : 'stop' }).catch(() => {}));
-chrome.runtime.onMessage.addListener((m, sender) => { if ('rec' in m) setState(m.rec, sender.tab?.id); });
+chrome.runtime.onMessage.addListener((m, sender) => { if ('rec' in m) { setState(m.rec, sender.tab?.id); if (m.rec && m.overlay) injectAll(); } });
 // If the recorder tab is closed mid-recording, don't leave the icon stuck on red
 chrome.tabs.onRemoved.addListener(async id => {
   const { recTab } = await chrome.storage.session.get('recTab');

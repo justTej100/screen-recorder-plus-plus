@@ -5,6 +5,7 @@
   "description": "Record your screen, mic and face cam. EQ your audio, trim, and re-record sections. Everything stays on your computer.",
   "minimum_chrome_version": "126",
   "permissions": [
+    "scripting",
     "storage",
     "unlimitedStorage"
   ],
@@ -50,5 +51,8 @@
       },
       "description": "Stop and save recording"
     }
-  }
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ]
 }

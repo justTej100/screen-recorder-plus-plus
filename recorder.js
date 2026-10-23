@@ -45,7 +45,7 @@ function buildAudio(ctx, mic, sysTracks) {
 
 // Elapsed time excludes paused time. The same numbers go to the on-screen bar (overlay.js) via storage.
 const elapsed = () => S.accum + (S.paused ? 0 : (Date.now() - S.last) / 1000);
-const publish = () => chrome.storage.local.set({ live: { status: S.paused ? 'paused' : 'recording', accum: S.accum, last: S.last, overlay: S.overlay } });
+const publish = () => chrome.storage.local.set({ live: { status: S.paused ? 'paused' : 'recording', accum: S.accum, last: S.last, overlay: !!S.useOverlay } });
 
 $('#rec').onclick = start;
 $('#pause').onclick = () => pause(!S.paused);
@@ -58,15 +58,86 @@ chrome.runtime.onMessage.addListener(m => {
 onbeforeunload = e => { if (S) e.preventDefault(); };
 const refreshLib = initLibrary($('#lib'), () => S?.m?.id);
 
+const IC = {
+  pause: '<svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>',
+  play: '<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>',
+  restart: '<svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>',
+  cancel: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
+  stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>',
+  back: '<svg viewBox="0 0 24 24"><path d="M11 6L5 12l6 6V6zM19 6l-6 6 6 6V6z"/></svg>'
+};
+const PIP_CSS = `
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:#fff;font:600 14px/1 system-ui,sans-serif}
+body{display:flex;align-items:center;justify-content:center;overflow:hidden}
+.bar{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 10px;border:2px solid #fff;border-radius:28px}
+.st{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.08em}
+.dot{width:9px;height:9px;border-radius:50%;background:#fff;animation:b 1.2s infinite}
+.paused .dot{background:none;border:2px solid #fff;animation:none}
+@keyframes b{50%{opacity:.2}}
+@media(prefers-reduced-motion:reduce){.dot{animation:none}}
+.time{font:600 17px ui-monospace,monospace;font-variant-numeric:tabular-nums;margin:0 0 4px}
+button{all:unset;box-sizing:border-box;min-width:44px;height:44px;display:grid;place-items:center;border-radius:14px;cursor:pointer;color:#fff;font:600 12px system-ui,sans-serif;padding:0 6px}
+button:hover,button.armed{background:#fff;color:#000}
+button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+button.stop{width:56px;height:56px;border-radius:16px;background:#fff;color:#000}
+button.stop:hover{background:#000;color:#fff;box-shadow:inset 0 0 0 2px #fff}
+hr{width:34px;border:0;border-top:2px solid #fff;margin:4px 0}
+svg{width:22px;height:22px;fill:currentColor}`;
+
+// Floating controls: a Picture-in-Picture window, so it sits on top of everything and is its own window
+// (not part of a tab or single-window recording). Chrome only allows opening it from a click, so start() opens it first.
+async function openPip() {
+  if (!window.documentPictureInPicture) return null;
+  try {
+    const w = await documentPictureInPicture.requestWindow({ width: 120, height: 360 });
+    const st = w.document.createElement('style'); st.textContent = PIP_CSS; w.document.head.append(st);
+    w.document.title = 'Recording controls';
+    w.document.body.innerHTML = `<div class="bar" role="toolbar" aria-label="Recording controls">
+      <button class="stop" data-c="stop" title="Stop and save" aria-label="Stop and save">${IC.stop}</button>
+      <div class="st"><span class="dot"></span><span id="pst">REC</span></div>
+      <div class="time" id="ptime">0:00</div>
+      <button data-c="pause" title="Pause" aria-label="Pause">${IC.pause}</button>
+      <button data-c="restart" title="Restart" aria-label="Restart">${IC.restart}</button>
+      <button data-c="cancel" title="Cancel recording" aria-label="Cancel recording">${IC.cancel}</button>
+      <hr>
+      <button data-c="back" title="Back to the recorder tab" aria-label="Back to the recorder tab">${IC.back}</button></div>`;
+    w.document.body.onclick = pipClick;
+    w.addEventListener('pagehide', () => { if (S?.pip === w) S.pip = null; });
+    return w;
+  } catch { return null; }
+}
+let armed = null, armT;
+function disarm() {
+  clearTimeout(armT);
+  try { if (armed && S?.pip) { const b = S.pip.document.querySelector(`[data-c="${armed}"]`); b.classList.remove('armed'); b.innerHTML = IC[armed]; } } catch {}
+  armed = null;
+}
+function pipClick(e) {
+  const b = e.target.closest('button'); if (!b || !S) return; const c = b.dataset.c;
+  if (c === 'stop') return stop();
+  if (c === 'pause') return pause(!S.paused);
+  if (c === 'back') return chrome.tabs.getCurrent(t => { if (t) { chrome.tabs.update(t.id, { active: true }); chrome.windows.update(t.windowId, { focused: true }); } });
+  if (armed === c) { disarm(); return c === 'cancel' ? cancel() : restart(); }   // these throw the take away: second click needed
+  disarm(); armed = c; b.classList.add('armed'); b.textContent = 'Sure?'; armT = setTimeout(disarm, 3000);
+}
+$('#pipBtn').onclick = async () => {
+  if (!S || S.pip) return;
+  const w = await openPip();
+  if (!w) return say('Couldn’t open the floating controls in this browser.');
+  S.pip = w; S.useOverlay = false; S.pipShown = undefined; publish(); tickUI();
+};
+
 async function start() {
   if (S) return;
   if (!mp4()) return say('This browser can’t record MP4. Update Chrome, Brave or Edge.');
+  const pip = $('#ovl').checked ? await openPip() : null;   // first await: opening it needs this click's user activation
   let screen, mic = null, cam = null;
   try {
     screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true });
     if ($('#mic').checked) mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: $('#ns').checked, autoGainControl: false, channelCount: 1, sampleRate: 48000 } });
     if ($('#cam').checked) cam = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-  } catch (e) { screen?.getTracks().forEach(t => t.stop()); mic?.getTracks().forEach(t => t.stop()); return say('Couldn’t start: ' + e.message); }
+  } catch (e) { screen?.getTracks().forEach(t => t.stop()); mic?.getTracks().forEach(t => t.stop()); pip?.close(); return say('Couldn’t start: ' + e.message); }
 
   // Video: screen + face cam bubble drawn on a canvas, ticked by a worker so it keeps running in a hidden tab
   const vt = screen.getVideoTracks()[0], { width: W = 1920, height: H = 1080 } = vt.getSettings();
@@ -74,7 +145,9 @@ async function start() {
   const sv = vid(screen), cv = cam && vid(cam);
   const cvs = Object.assign(document.createElement('canvas'), { width: W, height: H }), g = cvs.getContext('2d');
   const ticker = new Worker('worker.js');
+  let n = 0;
   ticker.onmessage = () => {
+    if (++n % 8 === 0 && S) tickUI();   // worker-driven, so the timer keeps updating while this tab is in the background
     g.drawImage(sv, 0, 0, W, H);
     if (cv?.videoWidth) {
       const d = Math.round(H * .24), x = 24, y = H - d - 24, s = Math.min(cv.videoWidth, cv.videoHeight);
@@ -84,13 +157,13 @@ async function start() {
   };
   ticker.postMessage({ t: 'tick' });
   const ctx = new AudioContext({ sampleRate: 48000, latencyHint: 'playback' }), A = buildAudio(ctx, mic, screen.getAudioTracks());
-  S = { screen, mic, cam, ctx, A, ticker, vtrack: cvs.captureStream(30).getVideoTracks()[0], overlay: $('#ovl').checked, rs: [], m: null, accum: 0, last: 0, paused: false, busy: false, iv: 0 };
+  S = { screen, mic, cam, ctx, A, ticker, vtrack: cvs.captureStream(30).getVideoTracks()[0], pip, useOverlay: $('#ovl').checked && !pip, pipShown: undefined, rs: [], m: null, accum: 0, last: 0, paused: false, busy: false, iv: 0 };
   vt.onended = stop;
   await begin();
   $('#rec').hidden = true; $('#ctl').hidden = false; $('#setup').disabled = true;
-  S.iv = setInterval(tickUI, 100); tickUI();
-  say('Recording. Switch to what you want to show. Control it from the on-screen bar, the shortcuts, or this tab.');
-  chrome.runtime.sendMessage({ rec: true }); setFav(true);
+  tickUI();
+  say('Recording. Switch to what you want to show. Use the floating controls, the shortcuts, or this tab.');
+  chrome.runtime.sendMessage({ rec: true, overlay: S.useOverlay }); setFav(true);
 }
 
 // Start a fresh take on the streams we already have (used by start and restart)
@@ -119,7 +192,7 @@ async function discard() {
   await meta.del(S.m.id);
 }
 function teardown() {
-  clearInterval(S.iv); S.ticker.terminate();
+  clearInterval(S.iv); S.ticker.terminate(); disarm(); S.pip?.close();
   [S.screen, S.mic, S.cam].forEach(st => st?.getTracks().forEach(t => t.stop())); S.ctx.close();
   chrome.storage.local.remove('live'); chrome.runtime.sendMessage({ rec: false });
   setFav(false); document.title = 'Screen Recorder Plus Plus';
@@ -155,6 +228,15 @@ function tickUI() {
   $('#big').textContent = e; $('#state').textContent = S.paused ? 'Paused' : 'Recording';
   $('#pause').textContent = S.paused ? 'Resume' : 'Pause';
   document.title = (S.paused ? '❚❚ Paused ' : '● Recording ') + e;
+  if (S.pip) {
+    const d = S.pip.document; d.getElementById('ptime').textContent = e;
+    if (S.pipShown !== S.paused) {
+      S.pipShown = S.paused; const p = d.querySelector('[data-c="pause"]');
+      p.innerHTML = S.paused ? IC.play : IC.pause; p.title = S.paused ? 'Resume' : 'Pause';
+      d.getElementById('pst').textContent = S.paused ? 'PAUSED' : 'REC'; d.querySelector('.bar').classList.toggle('paused', S.paused);
+    }
+  }
+  $('#pipBtn').hidden = !!S.pip;
   if (!S.A.an) return;
   S.A.an.getFloatTimeDomainData(buf);
   let pk = 0, sq = 0; for (const x of buf) { pk = Math.max(pk, Math.abs(x)); sq += x * x; }
