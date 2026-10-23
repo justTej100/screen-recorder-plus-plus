@@ -1,12 +1,11 @@
-<!doctype html><meta charset="utf-8"><title>Library · Screen Recorder Plus Plus</title>
+<!doctype html><meta charset="utf-8"><title>Editor · Screen Recorder Plus Plus</title>
 <link rel="icon" href="icons/icon-32.png">
 <link rel="stylesheet" href="style.css">
 <main>
-  <h1>Screen Recorder <span>++</span> Library</h1>
-  <p class="muted">Recordings are stored in this browser until you download them. Clearing site data deletes them.</p>
-  <div id="list"></div>
+  <div class="tools"><button id="close">← Close editor</button></div>
+  <h1 id="title">Editor</h1>
+  <p id="nf" class="muted" hidden>Recording not found. It may have been deleted.</p>
   <section id="editor" hidden>
-    <h2>Editor</h2>
     <video id="v"></video>
     <div id="tl"></div>
     <p class="muted">Dotted = kept · hatched = your voice muted · solid = voiceover recorded</p>
@@ -21,9 +20,9 @@
     <div class="tools"><button id="muteBtn">Mute my voice from here</button></div>
     <div id="mutes"></div>
     <div id="recbar" class="row" hidden><span>Recording voiceover. Use headphones.</span><button id="stopvo">Stop</button></div>
-    <p><button id="export" class="primary">Export edited MP4</button> <span id="prog" class="muted"></span></p>
-    <p class="muted">Export plays the video in real time, so keep this tab open and visible until it finishes.</p>
+    <p><button id="export" class="primary">Export edited MP4</button> <button id="dl" hidden>Download edited MP4</button> <button id="micdl" hidden>Download mic audio</button> <span id="prog" class="muted"></span></p>
+    <p class="muted">Export plays the video in real time, so keep this tab open and visible until it finishes. The edited video is also saved to your library.</p>
     <video id="xv" hidden></video>
   </section>
 </main>
-<script type="module" src="studio.js"></script>
+<script type="module" src="editor.js"></script>

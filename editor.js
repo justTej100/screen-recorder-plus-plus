@@ -4,27 +4,6 @@ const safe = s => s.replace(/[^\w -]+/g, '_');
 const btn = (t, f) => Object.assign(document.createElement('button'), { textContent: t, onclick: f });
 let E = null, muteStart = null;
 
-async function list() {
-  const box = $('#list'); box.textContent = '';
-  const all = await meta.all();
-  if (!all.length) box.innerHTML = '<p class="muted">Nothing recorded yet. Click the extension icon to record.</p>';
-  for (const m of all) {
-    let size = 0; try { size = (await getFile(m.tracks.main)).size; } catch {}
-    const row = document.createElement('div'), info = document.createElement('div'), acts = document.createElement('div');
-    row.className = 'row'; info.innerHTML = '<b></b><div class="muted"></div>';
-    info.firstChild.textContent = m.title;
-    info.lastChild.textContent = `${new Date(m.created).toLocaleString()} · ${m.dur ? fmt(m.dur) : 'length unknown'} · ${(size / 1e6).toFixed(1)} MB` + (m.status === 'recording' ? ' · recovered after interruption' : '');
-    acts.append(btn('Edit', () => edit(m)), btn('Download MP4', async () => save(await getFile(m.tracks.main), safe(m.title) + '.mp4')));
-    if (m.tracks.mic) acts.append(btn('Mic audio', async () => save(await getFile(m.tracks.mic), safe(m.title) + ' mic.m4a')));
-    acts.append(btn('Delete', async () => {
-      if (!confirm('Delete this recording from the browser? Download it first to keep it.')) return;
-      const r = await root(); for (const n of Object.values(m.tracks)) await r.removeEntry(n).catch(() => {});
-      await meta.del(m.id); if (E?.m.id === m.id) closeEditor(); list();
-    }));
-    row.append(info, acts); box.append(row);
-  }
-}
-
 function closeEditor() {
   if (!E) return; clearInterval(E.iv); v.pause(); Object.values(E.aud).forEach(a => a.pause());
   Object.values(E.urls).forEach(URL.revokeObjectURL); E = null; $('#editor').hidden = true;
@@ -35,6 +14,8 @@ async function edit(m) {
   E = { m, urls, dur: m.dur || 1, trim: [0, m.dur || 1], mutes: [], aud: {}, vol: +$('#volume').value };
   for (const k of ['mic', 'sys']) if (urls[k]) E.aud[k] = new Audio(urls[k]);
   v.src = urls.main; v.muted = true; $('#editor').hidden = false; muteStart = null;
+  $('#title').textContent = m.title; document.title = 'Edit · ' + m.title;
+  $('#micdl').hidden = !m.tracks.mic; $('#micdl').onclick = async () => save(await getFile(m.tracks.mic), safe(m.title) + ' mic.m4a');
   v.onloadedmetadata = () => { if (isFinite(v.duration) && v.duration > 0) { E.dur = v.duration; E.trim = [0, E.dur]; } render(); };
   E.iv = setInterval(tick, 80); render(); $('#editor').scrollIntoView();
 }
@@ -138,7 +119,8 @@ $('#export').onclick = async () => {
     if (rc.state !== 'inactive') rc.stop(); await done; await w.close(); ac.close();
     xv.hidden = true; xv.removeAttribute('src');
     await meta.set({ id, title: m.title + ' (edited)', created: Date.now(), dur: b - a, status: 'done', tracks: { main: name } });
-    E.exp = false; xb.disabled = false; $('#prog').textContent = 'Done. The edited video is in your library above.'; list();
+    E.exp = false; xb.disabled = false; $('#prog').textContent = 'Done. Also saved to your library.';
+    $('#dl').hidden = false; $('#dl').onclick = async () => save(await getFile(name), safe(m.title) + ' (edited).mp4');
   };
   const iv = setInterval(() => {
     const t = xv.currentTime;
@@ -152,4 +134,6 @@ $('#export').onclick = async () => {
   await Promise.all([xv.play(), ...tr.map(([el]) => el.play())]);
 };
 
-list();
+$('#close').onclick = () => window.close();
+const id = new URLSearchParams(location.search).get('id');
+chrome.storage.local.get('rec_' + id).then(r => r['rec_' + id] ? edit(r['rec_' + id]) : ($('#nf').hidden = false));

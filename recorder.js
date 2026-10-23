@@ -1,4 +1,5 @@
 import { writer, mp4, meta, fmt, root } from './shared.js';
+import { initLibrary } from './library.js';
 const $ = s => document.querySelector(s), say = t => $('#msg').textContent = t;
 const PRE = { 'Clear voice': [-2, 3, 2, 90], Podcast: [3, 2, 1, 80], 'Reduce room': [-5, 1, 0, 120], Flat: [0, 0, 0, 60] };
 const BANDS = ['low', 'mid', 'high'];
@@ -55,6 +56,7 @@ chrome.runtime.onMessage.addListener(m => {
   if (S && m.cmd) ({ pause: () => pause(true), resume: () => pause(false), toggle: () => pause(!S.paused), stop, cancel, restart })[m.cmd]?.();
 });
 onbeforeunload = e => { if (S) e.preventDefault(); };
+const refreshLib = initLibrary($('#lib'), () => S?.m?.id);
 
 async function start() {
   if (S) return;
@@ -122,7 +124,7 @@ function teardown() {
   chrome.storage.local.remove('live'); chrome.runtime.sendMessage({ rec: false });
   setFav(false); document.title = 'Screen Recorder Plus Plus';
   $('#rec').hidden = false; $('#ctl').hidden = true; $('#setup').disabled = false;
-  $('#lvl').style.width = 0; $('#lvl').className = ''; $('#clip').hidden = true; S = null;
+  $('#lvl').style.width = 0; $('#lvl').className = ''; $('#clip').hidden = true; S = null; refreshLib();
 }
 
 function pause(on) {
@@ -135,7 +137,7 @@ async function stop() {
   if (!S || S.busy) return; S.busy = true;
   const s = S, dur = elapsed();
   await finishRecorders(); s.m.dur = dur; s.m.status = 'done'; await meta.set(s.m);
-  teardown(); say(`Saved (${fmt(dur)}). Open the library to edit or download it. It isn’t on your disk until you download it.`);
+  teardown(); say(`Saved (${fmt(dur)}). It’s in the library on the right. It isn’t on your disk until you download it.`);
 }
 async function cancel() {
   if (!S || S.busy) return; S.busy = true;
@@ -143,7 +145,7 @@ async function cancel() {
 }
 async function restart() {
   if (!S || S.busy) return; S.busy = true;
-  await discard(); await begin(); S.busy = false; tickUI(); say('Started over.');
+  await discard(); await begin(); S.busy = false; refreshLib(); tickUI(); say('Started over.');
 }
 
 const buf = new Float32Array(1024);
