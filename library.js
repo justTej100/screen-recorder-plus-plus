@@ -1,7 +1,8 @@
 // Library sidebar: view, download, edit (opens the editor in a new tab) and delete
 import { getFile, root, meta, save, fmt } from './shared.js';
 const safe = s => s.replace(/[^\w -]+/g, '_');
-const btn = (t, f) => Object.assign(document.createElement('button'), { textContent: t, onclick: f });
+const CLS = { View: 'b-blue', Download: 'b-green', Edit: 'b-purple', Delete: 'b-pink' };
+const btn = (t, f) => Object.assign(document.createElement('button'), { textContent: t, onclick: f, className: CLS[t] || '' });
 
 export function initLibrary(box, activeId = () => null) {
   const dlg = document.querySelector('#view'), vv = dlg.querySelector('video');

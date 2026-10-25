@@ -1,7 +1,8 @@
 import { getFile, root, meta, save, mp4, writer, fmt } from './shared.js';
 const $ = s => document.querySelector(s), v = $('#v');
 const safe = s => s.replace(/[^\w -]+/g, '_');
-const btn = (t, f) => Object.assign(document.createElement('button'), { textContent: t, onclick: f });
+const CLS = { 'Record over': 'b-orange', 'Re-record': 'b-orange', Remove: 'b-pink' };
+const btn = (t, f) => Object.assign(document.createElement('button'), { textContent: t, onclick: f, className: CLS[t] || '' });
 let E = null, muteStart = null;
 
 function closeEditor() {

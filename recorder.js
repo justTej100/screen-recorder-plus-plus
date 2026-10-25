@@ -97,7 +97,7 @@ async function start() {
   vt.onended = stop;
   await begin();
   $('#rec').hidden = true; $('#ctl').hidden = false; $('#setup').disabled = true;
-  tickUI();
+  $('#meter').hidden = false; tickUI();
   say('Recording. Switch to what you want to show. Use the floating controls, the shortcuts, or this tab.');
   chrome.runtime.sendMessage({ rec: true, overlay: S.useOverlay }); setFav(true);
   chrome.storage.local.get('pill').then(r => { if (S) S.pill = r.pill; });
@@ -134,7 +134,7 @@ function teardown() {
   chrome.storage.local.remove('live'); chrome.runtime.sendMessage({ rec: false });
   setFav(false); document.title = 'Screen Recorder Plus Plus';
   $('#rec').hidden = false; $('#ctl').hidden = true; $('#setup').disabled = false;
-  $('#lvl').style.width = 0; $('#lvl').className = ''; $('#clip').hidden = true; S = null; refreshLib();
+  $('#lvl').style.width = 0; $('#lvl').className = ''; $('#clip').hidden = true; $('#meter').hidden = true; S = null; refreshLib();
 }
 
 function pause(on) {

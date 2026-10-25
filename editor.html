@@ -8,19 +8,19 @@
   <section id="editor" hidden>
     <video id="v"></video>
     <div id="tl"></div>
-    <p class="muted">Dotted = kept · hatched = your voice muted · solid = voiceover recorded</p>
+    <p class="muted">Blue = kept · pink stripes = your voice muted · green = voiceover recorded</p>
     <div class="player">
-      <button id="play" aria-label="Play"></button><span id="clock" class="muted"></span><span class="sp"></span>
-      <button id="vol" aria-label="Mute or unmute"></button><input type="range" id="volume" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+      <button id="play" class="b-purple" aria-label="Play"></button><span id="clock" class="muted"></span><span class="sp"></span>
+      <button id="vol" class="b-blue" aria-label="Mute or unmute"></button><input type="range" id="volume" min="0" max="1" step="0.05" value="1" aria-label="Volume">
     </div>
     <div class="tools">
-      <button id="setIn">Set start here</button><button id="setOut">Set end here</button><button id="reset">Reset trim</button>
+      <button id="setIn" class="b-blue">Set start here</button><button id="setOut" class="b-blue">Set end here</button><button id="reset">Reset trim</button>
       <span id="trimInfo" class="muted"></span>
     </div>
-    <div class="tools"><button id="muteBtn">Mute my voice from here</button></div>
+    <div class="tools"><button id="muteBtn" class="b-orange">Mute my voice from here</button></div>
     <div id="mutes"></div>
-    <div id="recbar" class="row" hidden><span>Recording voiceover. Use headphones.</span><button id="stopvo">Stop</button></div>
-    <p><button id="export" class="primary">Export edited MP4</button> <button id="dl" hidden>Download edited MP4</button> <button id="micdl" hidden>Download mic audio</button> <span id="prog" class="muted"></span></p>
+    <div id="recbar" class="row" hidden><span>Recording voiceover. Use headphones.</span><button id="stopvo" class="b-pink">Stop</button></div>
+    <p><button id="export" class="primary">Export edited MP4</button> <button id="dl" class="b-green" hidden>Download edited MP4</button> <button id="micdl" class="b-purple" hidden>Download mic audio</button> <span id="prog" class="muted"></span></p>
     <p class="muted">Export plays the video in real time, so keep this tab open and visible until it finishes. The edited video is also saved to your library.</p>
     <video id="xv" hidden></video>
   </section>
