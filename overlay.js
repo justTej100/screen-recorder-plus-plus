@@ -10,7 +10,7 @@
     min: '<svg viewBox="0 0 24 24"><path d="M11 6L5 12l6 6V6zM19 6l-6 6 6 6V6z"/></svg>'
   };
   const CSS = `
-  .bar{position:fixed;left:20px;bottom:20px;z-index:2147483647;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px;background:#000;color:#fff;border-radius:22px;box-shadow:0 0 0 1px rgba(255,255,255,.35),0 8px 24px rgba(0,0,0,.45);font:600 13px/1 system-ui,sans-serif;user-select:none;touch-action:none;cursor:grab}
+  .bar{position:fixed;left:20px;bottom:20px;z-index:2147483647;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px;background:#06101c;color:#fff;border-radius:22px;box-shadow:0 0 0 1px rgba(101,154,210,.55),0 8px 24px rgba(0,0,0,.45);font:600 13px/1 system-ui,sans-serif;user-select:none;touch-action:none;cursor:grab}
   .t{display:flex;align-items:center;gap:5px;margin:7px 0 5px;font-variant-numeric:tabular-nums}
   .dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:b 1.2s infinite}
   .paused .dot{background:none;border:1.5px solid #fff;animation:none}
@@ -19,10 +19,10 @@
   .grp{display:flex;flex-direction:column;gap:2px}
   hr{width:24px;border:0;border-top:1.5px solid #fff;margin:5px 0}
   button{all:unset;box-sizing:border-box;width:40px;height:40px;display:grid;place-items:center;border-radius:12px;cursor:pointer;color:#fff;font:600 10px system-ui,sans-serif;overflow:hidden}
-  button:hover,button.armed{background:#fff;color:#000}
+  button:hover,button.armed{background:#659AD2;color:#04162a}
   button:focus-visible{outline:2px solid #fff;outline-offset:1px}
-  button.stop{width:44px;height:44px;background:#fff;color:#000}
-  button.stop:hover{background:#000;color:#fff;box-shadow:inset 0 0 0 2px #fff}
+  button.stop{width:44px;height:44px;background:#659AD2;color:#04162a}
+  button.stop:hover{background:#06101c;color:#659AD2;box-shadow:inset 0 0 0 2px #659AD2}
   svg{width:20px;height:20px;fill:currentColor}
   .min .grp,.min hr{display:none}.min [data-c=min] svg{transform:rotate(180deg)}`;
   const fmt = t => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
