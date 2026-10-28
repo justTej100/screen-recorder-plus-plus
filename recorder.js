@@ -7,7 +7,7 @@ let filt, hpHz = 90, S = null;
 
 const setFav = rec => {   // tab icon swaps to the recording version while recording
   const l = document.querySelector('link[rel=icon]') || document.head.appendChild(Object.assign(document.createElement('link'), { rel: 'icon' }));
-  l.href = rec ? 'icons/rec-32.png' : 'icons/icon-32.png';
+  l.href = (rec ? 'icons/rec-32.png' : 'icons/icon-32.png') + '?v=3';
 };
 setFav(false);
 

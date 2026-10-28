@@ -6,7 +6,8 @@ main{max-width:860px;margin:0 auto;padding:32px 20px 70px}
 main.layout{max-width:1200px;padding:32px 28px 70px;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:48px}
 aside{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;padding-right:4px}
 @media(max-width:900px){main.layout{grid-template-columns:1fr}aside{position:static;max-height:none}}
-h1{font-size:28px;margin:0 0 20px;letter-spacing:-.02em;color:var(--c1)}
+h1{display:flex;align-items:center;gap:14px;font-size:28px;margin:0 0 20px;letter-spacing:-.02em;color:var(--c1)}
+.logo{width:46px;height:46px;flex:none}
 h2{font-size:13px;margin:28px 0 10px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}
 aside h2{margin-top:6px}
 fieldset{border:0;margin:0;padding:0}
