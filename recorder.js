@@ -57,6 +57,19 @@ chrome.runtime.onMessage.addListener(m => {
 });
 onbeforeunload = e => { if (S) e.preventDefault(); };
 const refreshLib = initLibrary($('#lib'), () => S?.m?.id);
+const lock = v => document.querySelectorAll('.opt').forEach(e => { e.disabled = v; });   // options can't change mid-recording
+
+// Sidebar navigation: Record / Settings
+const panes = { navRec: '#viewRec', navSet: '#viewSet' };
+for (const id in panes) $('#' + id).onclick = () => {
+  for (const k in panes) {
+    const on = k === id; $(panes[k]).hidden = !on; $('#' + k).classList.toggle('on', on);
+    if (on) $('#' + k).setAttribute('aria-current', 'page'); else $('#' + k).removeAttribute('aria-current');
+  }
+};
+// Top-right ⋯ menu (shortcuts)
+$('#topMore').onclick = e => { e.stopPropagation(); const m = $('#topMenu'); m.hidden = !m.hidden; $('#topMore').setAttribute('aria-expanded', String(!m.hidden)); };
+addEventListener('click', () => { $('#topMenu').hidden = true; $('#topMore').setAttribute('aria-expanded', 'false'); });
 
 chrome.storage.onChanged.addListener((c, a) => { if (a === 'local' && c.pill && S) S.pill = c.pill.newValue; });
 
@@ -65,9 +78,9 @@ async function start() {
   if (!mp4()) return say('This browser can’t record MP4. Update Chrome, Brave or Edge.');
   let screen, mic = null, cam = null;
   try {
-    screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true });
-    if ($('#mic').checked) mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: $('#ns').checked, autoGainControl: false, channelCount: 1, sampleRate: 48000 } });
-    if ($('#cam').checked) cam = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+    screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30, displaySurface: $('#surf').value }, audio: $('#sys').value === 'on' });
+    if ($('#mic').value === 'on') mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: $('#ns').checked, autoGainControl: false, channelCount: 1, sampleRate: 48000 } });
+    if ($('#cam').value === 'on') cam = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
   } catch (e) { screen?.getTracks().forEach(t => t.stop()); mic?.getTracks().forEach(t => t.stop()); return say('Couldn’t start: ' + e.message); }
 
   // Video: screen + face cam bubble drawn on a canvas, ticked by a worker so it keeps running in a hidden tab
@@ -96,7 +109,7 @@ async function start() {
   S = { screen, mic, cam, ctx, A, ticker, vtrack: cvs.captureStream(30).getVideoTracks()[0], useOverlay: $('#ovl').checked, surface: vt.getSettings().displaySurface, pill: null, rs: [], m: null, accum: 0, last: 0, paused: false, busy: false, iv: 0 };
   vt.onended = stop;
   await begin();
-  $('#rec').hidden = true; $('#ctl').hidden = false; $('#setup').disabled = true;
+  $('#hero').hidden = true; $('#ctl').hidden = false; lock(true);
   $('#meter').hidden = false; tickUI();
   say('Recording. Switch to what you want to show. Use the floating controls, the shortcuts, or this tab.');
   chrome.runtime.sendMessage({ rec: true, overlay: S.useOverlay }); setFav(true);
@@ -133,7 +146,7 @@ function teardown() {
   [S.screen, S.mic, S.cam].forEach(st => st?.getTracks().forEach(t => t.stop())); S.ctx.close();
   chrome.storage.local.remove('live'); chrome.runtime.sendMessage({ rec: false });
   setFav(false); document.title = 'Screen Recorder Plus Plus';
-  $('#rec').hidden = false; $('#ctl').hidden = true; $('#setup').disabled = false;
+  $('#hero').hidden = false; $('#ctl').hidden = true; lock(false);
   $('#lvl').style.width = 0; $('#lvl').className = ''; $('#clip').hidden = true; $('#meter').hidden = true; S = null; refreshLib();
 }
 

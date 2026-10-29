@@ -1,42 +1,65 @@
 <!doctype html><meta charset="utf-8"><title>Screen Recorder Plus Plus</title>
 <link rel="icon" type="image/png" href="icons/icon-32.png?v=3">
 <link rel="stylesheet" href="style.css">
-<main class="layout">
-  <div>
-    <h1><img class="logo" src="icons/icon-128.png" alt="">Screen Recorder ++</h1>
-    <fieldset id="setup">
-      <label><input type="checkbox" id="mic" checked> Microphone</label>
-      <label><input type="checkbox" id="ns" checked> Reduce background noise</label>
-      <label><input type="checkbox" id="cam"> Face cam bubble</label>
-      <label><input type="checkbox" id="ovl" checked> On-screen controls (a small bar over your page, hidden from tab and window recordings)</label>
-    </fieldset>
-    <p class="muted">In the share picker, tick “Share audio” to also capture system or tab audio.</p>
-    <h2>Mic sound</h2>
-    <select id="preset" aria-label="Mic preset"></select>
-    <div class="eq">
-      <label>Bass <input type="range" id="low" min="-12" max="12" value="0"></label>
-      <label>Mid <input type="range" id="mid" min="-12" max="12" value="0"></label>
-      <label>Treble <input type="range" id="high" min="-12" max="12" value="0"></label>
-    </div>
-    <div class="meter" id="meter" hidden><b id="lvl"></b></div>
-    <p id="clip" class="muted" hidden><b>CLIPPING:</b> lower your mic level</p>
-    <button id="rec" class="primary">Start recording</button>
-    <div id="ctl" hidden>
-      <div id="big">0:00</div>
-      <div id="state" class="muted">Recording</div>
-      <div class="tools">
-        <button id="pause" class="b-orange">Pause</button><button id="restart" class="b-blue">Restart</button><button id="cancel" class="b-pink">Cancel</button><button id="stop" class="primary">Stop and save</button>
-      </div>
-      <p class="muted">Shortcuts anywhere: Alt+Shift+P pause or resume, Alt+Shift+S stop.</p>
-    </div>
-    <p id="msg" class="muted"></p>
-  </div>
-  <aside aria-label="Library">
-    <h2>Library</h2>
-    <p class="muted">Recordings stay in this browser until you download them. Clearing site data deletes them.</p>
-    <div id="lib"></div>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><img src="icons/icon-128.png" alt=""><span>Screen Recorder ++</span></div>
+    <nav class="nav" aria-label="Sections">
+      <button id="navRec" class="on" aria-current="page"><span class="dotb"></span>Record</button>
+      <button id="navSet"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Settings</button>
+    </nav>
+    <div class="libhead"><h2>Recent Recordings</h2><button id="clearAll" class="link">Clear All</button></div>
+    <div id="lib" class="lib"></div>
   </aside>
-</main>
+  <section class="stage">
+    <div class="topbar">
+      <button id="topMore" class="round" aria-label="Shortcuts" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+      <div id="topMenu" class="pop" hidden><p class="muted"><b>Shortcuts anywhere</b></p><p class="muted">Alt+Shift+P: pause or resume</p><p class="muted">Alt+Shift+S: stop and save</p></div>
+    </div>
+
+    <div id="viewRec" class="pane">
+      <div id="hero">
+        <button id="rec" class="hero-btn" aria-label="Start recording"><img src="icons/icon-128.png" alt=""></button>
+        <h1>Start Recording</h1>
+        <p class="sub">Capture your screen with ease</p>
+        <div class="opts">
+          <label class="seg"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+            <select id="mic" class="opt" aria-label="Microphone"><option value="on">Microphone</option><option value="off">Mic off</option></select></label>
+          <label class="seg"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M19 5.5a9 9 0 0 1 0 13"/></svg>
+            <select id="sys" class="opt" aria-label="System audio"><option value="on">System Audio</option><option value="off">Audio off</option></select></label>
+          <label class="seg"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+            <select id="surf" class="opt" aria-label="What to capture"><option value="browser">Chrome Tab</option><option value="window">Window</option><option value="monitor">Full Screen</option></select></label>
+          <label class="seg"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="M16 10l5-3v10l-5-3"/></svg>
+            <select id="cam" class="opt" aria-label="Face cam"><option value="off">Face cam off</option><option value="on">Face cam</option></select></label>
+        </div>
+      </div>
+      <div id="ctl" hidden>
+        <div id="state" class="muted">Recording</div>
+        <div id="big">0:00</div>
+        <div class="tools">
+          <button id="pause" class="b-orange">Pause</button><button id="restart" class="b-blue">Restart</button><button id="cancel" class="b-pink">Cancel</button><button id="stop" class="primary">Stop and save</button>
+        </div>
+        <div class="meter" id="meter" hidden><b id="lvl"></b></div>
+        <p id="clip" class="muted" hidden><b>CLIPPING:</b> lower your mic level</p>
+      </div>
+      <p id="msg" class="muted"></p>
+    </div>
+
+    <div id="viewSet" class="pane" hidden>
+      <h1>Settings</h1>
+      <h2>Mic sound</h2>
+      <select id="preset" aria-label="Mic preset"></select>
+      <div class="eq">
+        <label>Bass <input type="range" id="low" min="-12" max="12" value="0"></label>
+        <label>Mid <input type="range" id="mid" min="-12" max="12" value="0"></label>
+        <label>Treble <input type="range" id="high" min="-12" max="12" value="0"></label>
+      </div>
+      <label class="chk"><input type="checkbox" id="ns" class="opt" checked> Reduce background noise</label>
+      <label class="chk"><input type="checkbox" id="ovl" class="opt" checked> On-screen recording bar (hidden from tab and window recordings)</label>
+      <p class="muted">Recordings stay in this browser until you download them. Clearing site data deletes them.</p>
+    </div>
+  </section>
+</div>
 <dialog id="view">
   <div class="vh"><h2></h2><button id="closeview">Close</button></div>
   <video controls></video>
