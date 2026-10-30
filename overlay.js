@@ -27,9 +27,9 @@
   .min .grp,.min hr{display:none}.min [data-c=min] svg{transform:rotate(180deg)}`;
   const fmt = t => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); };
 
-  let host, bar, st, iv, armed, armT, shownPaused, lastK = '';
+  let host, bar, st, iv, armed, armT, shownPaused, mounting = false, lastK = '';
   const btn = c => bar.querySelector(`[data-c="${c}"]`);
-  const send = cmd => { try { chrome.runtime.sendMessage({ cmd }); } catch {} };
+  const send = cmd => { try { chrome.runtime.sendMessage({ cmd }); } catch {} if (location.protocol === 'chrome-extension:') dispatchEvent(new CustomEvent('srpp-cmd', { detail: cmd })); };
   const disarm = () => { clearTimeout(armT); if (armed) { const b = btn(armed); b.classList.remove('armed'); b.innerHTML = IC[armed]; armed = null; } };
 
   // Tell the recorder where the bar is (as fractions of the page and of the browser window),
@@ -90,7 +90,8 @@
   async function apply(live) {
     st = live; clearInterval(iv);
     if (!live || !live.overlay) { host?.remove(); host = bar = null; shownPaused = undefined; return; }
-    if (!host) mount((await chrome.storage.local.get('pill')).pill);
+    if (!host && !mounting) { mounting = true; const { pill } = await chrome.storage.local.get('pill'); if (!host && st?.overlay) mount(pill); mounting = false; }
+    if (!host) return;
     render(); iv = setInterval(render, 250);
   }
   addEventListener('resize', () => requestAnimationFrame(report));

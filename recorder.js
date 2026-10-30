@@ -52,9 +52,9 @@ $('#pause').onclick = () => pause(!S.paused);
 $('#stop').onclick = stop;
 $('#cancel').onclick = () => confirm('Discard this recording? It can’t be recovered.') && cancel();
 $('#restart').onclick = () => confirm('Discard this take and start over?') && restart();
-chrome.runtime.onMessage.addListener(m => {
-  if (S && m.cmd) ({ pause: () => pause(true), resume: () => pause(false), toggle: () => pause(!S.paused), stop, cancel, restart })[m.cmd]?.();
-});
+const run = cmd => S && ({ pause: () => pause(true), resume: () => pause(false), toggle: () => pause(!S.paused), stop, cancel, restart })[cmd]?.();
+chrome.runtime.onMessage.addListener(m => m.cmd && run(m.cmd));   // from the on-screen bar on other pages, and from shortcuts
+addEventListener('srpp-cmd', e => run(e.detail));                // from the on-screen bar when it is shown on this page
 onbeforeunload = e => { if (S) e.preventDefault(); };
 const refreshLib = initLibrary($('#lib'), () => S?.m?.id);
 const lock = v => document.querySelectorAll('.opt').forEach(e => { e.disabled = v; });   // options can't change mid-recording
