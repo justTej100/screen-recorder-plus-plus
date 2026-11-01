@@ -3,7 +3,7 @@ import { initLibrary } from './library.js';
 const $ = s => document.querySelector(s), say = t => $('#msg').textContent = t;
 const PRE = { 'Clear voice': [-2, 3, 2, 90], Podcast: [3, 2, 1, 80], 'Reduce room': [-5, 1, 0, 120], Flat: [0, 0, 0, 60] };
 const BANDS = ['low', 'mid', 'high'];
-let filt, hpHz = 90, S = null;
+let filt, testChain = null, hpHz = 90, S = null;
 
 const setFav = rec => {   // tab icon swaps to the recording version while recording
   const l = document.querySelector('link[rel=icon]') || document.head.appendChild(Object.assign(document.createElement('link'), { rel: 'icon' }));
@@ -12,27 +12,35 @@ const setFav = rec => {   // tab icon swaps to the recording version while recor
 setFav(false);
 
 $('#preset').innerHTML = Object.keys(PRE).map(k => `<option>${k}</option>`).join('');
-const eq = () => filt && BANDS.forEach(k => filt[k].gain.value = +$('#' + k).value);
+const eq = () => [filt, testChain].forEach(f => f && BANDS.forEach(k => { f[k].gain.value = +$('#' + k).value; }));
 $('#preset').onchange = () => {
   const p = PRE[$('#preset').value]; BANDS.forEach((k, i) => $('#' + k).value = p[i]);
-  hpHz = p[3]; if (filt) filt.hp.frequency.value = hpHz; eq();
+  hpHz = p[3]; [filt, testChain].forEach(f => f && (f.hp.frequency.value = hpHz)); eq();
 };
 BANDS.forEach(k => $('#' + k).oninput = eq);
 $('#preset').onchange();
+
+// The mic processing chain (EQ + compressor). Used for recording and for the mic test, so they sound the same.
+function makeChain(ctx) {
+  const c = {
+    hp: new BiquadFilterNode(ctx, { type: 'highpass', frequency: hpHz, Q: .7 }),
+    low: new BiquadFilterNode(ctx, { type: 'lowshelf', frequency: 120 }),
+    mid: new BiquadFilterNode(ctx, { type: 'peaking', frequency: 2500, Q: 1 }),
+    high: new BiquadFilterNode(ctx, { type: 'highshelf', frequency: 8000 }),
+    comp: new DynamicsCompressorNode(ctx, { threshold: -24, ratio: 3, attack: .01, release: .25 })
+  };
+  c.hp.connect(c.low).connect(c.mid).connect(c.high).connect(c.comp);
+  BANDS.forEach(k => { c[k].gain.value = +$('#' + k).value; });
+  return c;
+}
 
 function buildAudio(ctx, mic, sysTracks) {
   const mix = ctx.createMediaStreamDestination(), out = { mix };
   if (mic) {
     const src = ctx.createMediaStreamSource(mic);
-    filt = {
-      hp: new BiquadFilterNode(ctx, { type: 'highpass', frequency: hpHz, Q: .7 }),
-      low: new BiquadFilterNode(ctx, { type: 'lowshelf', frequency: 120 }),
-      mid: new BiquadFilterNode(ctx, { type: 'peaking', frequency: 2500, Q: 1 }),
-      high: new BiquadFilterNode(ctx, { type: 'highshelf', frequency: 8000 })
-    };
-    const comp = new DynamicsCompressorNode(ctx, { threshold: -24, ratio: 3, attack: .01, release: .25 });
+    filt = makeChain(ctx);
     out.an = new AnalyserNode(ctx, { fftSize: 1024 });
-    src.connect(filt.hp).connect(filt.low).connect(filt.mid).connect(filt.high).connect(comp).connect(out.an);
+    src.connect(filt.hp); filt.comp.connect(out.an);
     out.an.connect(mix); out.mic = ctx.createMediaStreamDestination(); out.an.connect(out.mic);
     eq();
   }
@@ -71,10 +79,61 @@ for (const id in panes) $('#' + id).onclick = () => {
 $('#topMore').onclick = e => { e.stopPropagation(); const m = $('#topMenu'); m.hidden = !m.hidden; $('#topMore').setAttribute('aria-expanded', String(!m.hidden)); };
 addEventListener('click', () => { $('#topMenu').hidden = true; $('#topMore').setAttribute('aria-expanded', 'false'); });
 
+// ---- Test your mic: record 5 seconds, then play it back through the current settings (so you hear your own voice)
+let testBuf = null, testCtx = null, testSrc = null, testAn = null, testIv = 0;
+const tmsg = t => { $('#testMsg').textContent = t; };
+const level = an => {
+  const b = new Float32Array(1024); an.getFloatTimeDomainData(b); let sq = 0; for (const x of b) sq += x * x;
+  $('#testLvl').style.width = Math.min(100, Math.sqrt(sq / b.length) * 300) + '%';
+};
+function stopTest() {
+  clearInterval(testIv);
+  if (testSrc) { testSrc.onended = null; try { testSrc.stop(); } catch {} testSrc.disconnect(); testSrc = null; }
+  $('#testPlay').textContent = 'Play back'; $('#testLvl').style.width = 0;
+}
+function playTest() {
+  stopTest();
+  testCtx ??= new AudioContext({ sampleRate: 48000 });
+  if (!testChain) {
+    testChain = makeChain(testCtx); testAn = new AnalyserNode(testCtx, { fftSize: 1024 });
+    testChain.comp.connect(testCtx.destination); testChain.comp.connect(testAn);
+  }
+  testCtx.resume();
+  testSrc = testCtx.createBufferSource(); testSrc.buffer = testBuf; testSrc.connect(testChain.hp);
+  testSrc.onended = () => { stopTest(); tmsg('Press Play back to hear it again, or record a new test.'); };
+  testSrc.start(); $('#testPlay').textContent = 'Stop';
+  tmsg('Playing back with your current settings. Move the sliders to hear the difference.');
+  testIv = setInterval(() => level(testAn), 80);
+}
+$('#testPlay').onclick = () => testSrc ? stopTest() : playTest();
+$('#testRec').onclick = async () => {
+  if (S) return tmsg('Stop your recording before testing the mic.');
+  if (!$('#mic').value || $('#mic').value === 'off') return tmsg('The microphone is turned off. Turn it on above first.');
+  stopTest();
+  let mic;
+  try { mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: $('#ns').checked, autoGainControl: false, channelCount: 1, sampleRate: 48000 } }); }
+  catch (e) { return tmsg('Couldn’t use the microphone: ' + e.message); }
+  const ctx = new AudioContext(), an = new AnalyserNode(ctx, { fftSize: 1024 }); ctx.createMediaStreamSource(mic).connect(an);
+  const r = new MediaRecorder(mic, { mimeType: mp4(true), audioBitsPerSecond: 192000 }), ch = [];
+  r.ondataavailable = e => ch.push(e.data);
+  const done = new Promise(res => { r.onstop = res; });
+  $('#testRec').disabled = true; $('#testPlay').disabled = true; r.start();
+  let left = 5; tmsg(`Recording… speak now (${left}s)`);
+  testIv = setInterval(() => level(an), 80);
+  const tick = setInterval(() => { left--; if (left <= 0) { clearInterval(tick); r.stop(); } else tmsg(`Recording… speak now (${left}s)`); }, 1000);
+  await done; clearInterval(tick); clearInterval(testIv);
+  mic.getTracks().forEach(t => t.stop()); ctx.close(); $('#testRec').disabled = false; $('#testLvl').style.width = 0;
+  try {
+    const d = new AudioContext(); testBuf = await d.decodeAudioData(await new Blob(ch, { type: 'audio/mp4' }).arrayBuffer()); d.close();
+  } catch { return tmsg('Couldn’t read the test recording. Try again.'); }
+  $('#testPlay').disabled = false; playTest();
+};
+
 chrome.storage.onChanged.addListener((c, a) => { if (a === 'local' && c.pill && S) S.pill = c.pill.newValue; });
 
 async function start() {
   if (S) return;
+  stopTest();
   if (!mp4()) return say('This browser can’t record MP4. Update Chrome, Brave or Edge.');
   let screen, mic = null, cam = null;
   try {

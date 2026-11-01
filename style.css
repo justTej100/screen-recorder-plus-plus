@@ -104,3 +104,5 @@ dialog h2{margin:0;font-size:16px;text-transform:none;letter-spacing:0;color:var
 .player button{padding:6px 10px;display:grid;place-items:center}
 .player svg{width:20px;height:20px;fill:currentColor}
 @media(max-width:860px){.app{grid-template-columns:1fr;height:auto}.side{max-height:70vh}.stage{min-height:70vh}}
+.test{margin:20px 0}
+.test .meter{margin:12px 0 6px}

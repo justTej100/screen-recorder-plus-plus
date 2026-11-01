@@ -49,6 +49,11 @@
         <label>Mid <input type="range" id="mid" min="-12" max="12" value="0"></label>
         <label>Treble <input type="range" id="high" min="-12" max="12" value="0"></label>
       </div>
+      <div class="test">
+        <div class="tools"><button id="testRec" class="primary">Record a test</button><button id="testPlay" disabled>Play back</button></div>
+        <div class="meter"><b id="testLvl"></b></div>
+        <p id="testMsg" class="muted">Record 5 seconds of your voice, then play it back through your current settings. Move the sliders or change the preset while it plays to hear the difference. Changing “Reduce background noise” needs a new test recording.</p>
+      </div>
       <label class="chk"><input type="checkbox" id="ns" class="opt" checked> Reduce background noise</label>
       <label class="chk"><input type="checkbox" id="ovl" class="opt" checked> On-screen recording bar (hidden from tab and window recordings)</label>
       <p class="muted">Recordings stay in this browser until you download them. Clearing site data deletes them.</p>
