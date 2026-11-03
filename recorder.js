@@ -131,16 +131,91 @@ $('#testRec').onclick = async () => {
 
 chrome.storage.onChanged.addListener((c, a) => { if (a === 'local' && c.pill && S) S.pill = c.pill.newValue; });
 
+// ---- Floating controls: a Chrome Picture-in-Picture window. It stays on top of every window and app, which a
+// page overlay can't do. Chrome only opens it from a click, so start() opens it first, before the share picker.
+const IC = {
+  pause: '<svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>',
+  play: '<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>',
+  restart: '<svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>',
+  cancel: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
+  stop: '<svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>'
+};
+const PIP_CSS = `
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:#fff;font:600 14px/1 system-ui,sans-serif}
+body{display:flex;align-items:center;justify-content:center;overflow:hidden}
+[hidden]{display:none!important}
+.bar{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px}
+.cambox{width:150px;height:150px;border-radius:50%;overflow:hidden;margin-bottom:10px;box-shadow:0 0 0 2px rgba(255,255,255,.4)}
+.cambox video{display:block;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.st{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;letter-spacing:.08em}
+.dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:b 1.2s infinite}
+.paused .dot{background:none;border:1.5px solid #fff;animation:none}
+@keyframes b{50%{opacity:.2}}
+@media(prefers-reduced-motion:reduce){.dot{animation:none}}
+.time{font:700 18px ui-monospace,monospace;font-variant-numeric:tabular-nums;margin:2px 0 8px}
+button{all:unset;box-sizing:border-box;width:44px;height:44px;display:grid;place-items:center;border-radius:13px;cursor:pointer;color:#fff;font:600 11px system-ui,sans-serif;overflow:hidden}
+button:hover,button.armed{background:#fff;color:#000}
+button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+button.stop{width:56px;height:56px;border-radius:16px;background:#fff;color:#000}
+button.stop:hover{background:#000;color:#fff;box-shadow:inset 0 0 0 2px #fff}
+svg{width:22px;height:22px;fill:currentColor}`;
+
+async function openPip() {
+  if (!window.documentPictureInPicture) return null;
+  try {
+    const w = await documentPictureInPicture.requestWindow({ width: 200, height: $('#cam').value === 'on' ? 470 : 310 });
+    const st = w.document.createElement('style'); st.textContent = PIP_CSS; w.document.head.append(st);
+    w.document.title = 'Recording controls';
+    w.document.body.innerHTML = `<div class="bar" role="toolbar" aria-label="Recording controls">
+      <div class="cambox" id="pcamBox" hidden><video id="pcam" autoplay muted playsinline></video></div>
+      <button class="stop" data-c="stop" title="Stop and save" aria-label="Stop and save">${IC.stop}</button>
+      <div class="st"><span class="dot"></span><span id="pst">REC</span></div>
+      <div class="time" id="ptime">0:00</div>
+      <button data-c="pause" title="Pause" aria-label="Pause">${IC.pause}</button>
+      <button data-c="restart" title="Restart" aria-label="Restart">${IC.restart}</button>
+      <button data-c="cancel" title="Cancel recording" aria-label="Cancel recording">${IC.cancel}</button></div>`;
+    w.document.body.onclick = pipClick;
+    w.addEventListener('pagehide', () => { if (S?.pip === w) S.pip = null; });
+    return w;
+  } catch { return null; }
+}
+function attachCam() {   // show your camera in the floating window (the stream is already open on this page)
+  if (!S?.pip || S.pip.closed) return;
+  const box = S.pip.document.getElementById('pcamBox'), v = S.pip.document.getElementById('pcam');
+  box.hidden = !S.cam; if (S.cam) { v.srcObject = S.cam; v.play().catch(() => {}); }
+}
+let armed = null, armT;
+function disarm() {
+  clearTimeout(armT);
+  try { if (armed && S?.pip) { const b = S.pip.document.querySelector(`[data-c="${armed}"]`); b.classList.remove('armed'); b.innerHTML = IC[armed]; } } catch {}
+  armed = null;
+}
+function pipClick(e) {
+  const b = e.target.closest('button'); if (!b || !S) return; const c = b.dataset.c;
+  if (c === 'stop') return stop();
+  if (c === 'pause') return pause(!S.paused);
+  if (armed === c) { disarm(); return c === 'cancel' ? cancel() : restart(); }   // these throw the take away: second click needed
+  disarm(); armed = c; b.classList.add('armed'); b.textContent = 'Sure?'; armT = setTimeout(disarm, 3000);
+}
+$('#pipBtn').onclick = async () => {
+  if (!S || (S.pip && !S.pip.closed)) return;
+  const w = await openPip();
+  if (!w) return say('Couldn’t open the floating controls in this browser.');
+  S.pip = w; S.useOverlay = false; S.pipShown = undefined; attachCam(); publish(); tickUI();
+};
+
 async function start() {
   if (S) return;
   stopTest();
   if (!mp4()) return say('This browser can’t record MP4. Update Chrome, Brave or Edge.');
+  const pip = $('#ovl').checked ? await openPip() : null;   // first await: opening it needs this click's user activation
   let screen, mic = null, cam = null;
   try {
     screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true });
     if ($('#mic').value === 'on') mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: $('#ns').checked, autoGainControl: false, channelCount: 1, sampleRate: 48000 } });
     if ($('#cam').value === 'on') cam = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-  } catch (e) { screen?.getTracks().forEach(t => t.stop()); mic?.getTracks().forEach(t => t.stop()); return say('Couldn’t start: ' + e.message); }
+  } catch (e) { screen?.getTracks().forEach(t => t.stop()); mic?.getTracks().forEach(t => t.stop()); pip?.close(); return say('Couldn’t start: ' + e.message); }
 
   // Video: screen + face cam bubble drawn on a canvas, ticked by a worker so it keeps running in a hidden tab
   const vt = screen.getVideoTracks()[0], { width: W = 1920, height: H = 1080 } = vt.getSettings();
@@ -157,7 +232,7 @@ async function start() {
       const x = Math.max(0, Math.floor(p.l * W) - 8), y = Math.max(0, Math.floor(p.t * H) - 8), w = Math.min(W - x, Math.ceil(p.w * W) + 16), h = Math.min(H - y, Math.ceil(p.h * H) + 16);
       g.drawImage(g.canvas, x > 3 ? x - 3 : Math.min(W - 1, x + w + 3), y, 1, h, x, y, w, h);
     }
-    if (cv?.videoWidth) {
+    if (cv?.videoWidth && !(S?.surface === 'monitor' && S.pip && !S.pip.closed)) {
       const d = Math.round(H * .24), x = 24, y = H - d - 24, s = Math.min(cv.videoWidth, cv.videoHeight);
       g.save(); g.beginPath(); g.arc(x + d / 2, y + d / 2, d / 2, 0, 7); g.clip();
       g.drawImage(cv, (cv.videoWidth - s) / 2, (cv.videoHeight - s) / 2, s, s, x, y, d, d); g.restore();
@@ -165,8 +240,8 @@ async function start() {
   };
   ticker.postMessage({ t: 'tick' });
   const ctx = new AudioContext({ sampleRate: 48000, latencyHint: 'playback' }), A = buildAudio(ctx, mic, screen.getAudioTracks());
-  S = { screen, mic, cam, ctx, A, ticker, vtrack: cvs.captureStream(30).getVideoTracks()[0], useOverlay: $('#ovl').checked, surface: vt.getSettings().displaySurface, pill: null, rs: [], m: null, accum: 0, last: 0, paused: false, busy: false, iv: 0 };
-  vt.onended = stop;
+  S = { screen, mic, cam, ctx, A, ticker, vtrack: cvs.captureStream(30).getVideoTracks()[0], pip, pipShown: undefined, useOverlay: $('#ovl').checked && !pip, surface: vt.getSettings().displaySurface, pill: null, rs: [], m: null, accum: 0, last: 0, paused: false, busy: false, iv: 0 };
+  vt.onended = stop; attachCam();
   await begin();
   $('#hero').hidden = true; $('#ctl').hidden = false; lock(true);
   $('#meter').hidden = false; tickUI();
@@ -201,7 +276,7 @@ async function discard() {
   await meta.del(S.m.id);
 }
 function teardown() {
-  clearInterval(S.iv); S.ticker.terminate(); 
+  clearInterval(S.iv); S.ticker.terminate(); disarm(); S.pip?.close(); 
   [S.screen, S.mic, S.cam].forEach(st => st?.getTracks().forEach(t => t.stop())); S.ctx.close();
   chrome.storage.local.remove('live'); chrome.runtime.sendMessage({ rec: false });
   setFav(false); document.title = 'Screen Recorder Plus Plus';
@@ -237,6 +312,15 @@ function tickUI() {
   $('#big').textContent = e; $('#state').textContent = S.paused ? 'Paused' : 'Recording';
   $('#pause').textContent = S.paused ? 'Resume' : 'Pause';
   document.title = (S.paused ? '❚❚ Paused ' : '● Recording ') + e;
+  if (S.pip && !S.pip.closed) {
+    const d = S.pip.document; d.getElementById('ptime').textContent = e;
+    if (S.pipShown !== S.paused) {
+      S.pipShown = S.paused; const p = d.querySelector('[data-c="pause"]');
+      p.innerHTML = S.paused ? IC.play : IC.pause; p.title = S.paused ? 'Resume' : 'Pause';
+      d.getElementById('pst').textContent = S.paused ? 'PAUSED' : 'REC'; d.querySelector('.bar').classList.toggle('paused', S.paused);
+    }
+  }
+  $('#pipBtn').hidden = !!(S.pip && !S.pip.closed);
   if (!S.A.an) return;
   S.A.an.getFloatTimeDomainData(buf);
   let pk = 0, sq = 0; for (const x of buf) { pk = Math.max(pk, Math.abs(x)); sq += x * x; }

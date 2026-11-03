@@ -27,7 +27,7 @@
         <div id="state" class="muted">Recording</div>
         <div id="big">0:00</div>
         <div class="tools">
-          <button id="pause" class="b-orange">Pause</button><button id="restart" class="b-blue">Restart</button><button id="cancel" class="b-pink">Cancel</button><button id="stop" class="primary">Stop and save</button>
+          <button id="pause" class="b-orange">Pause</button><button id="restart" class="b-blue">Restart</button><button id="cancel" class="b-pink">Cancel</button><button id="stop" class="primary">Stop and save</button><button id="pipBtn" hidden>Show floating controls</button>
         </div>
         <div class="meter" id="meter" hidden><b id="lvl"></b></div>
         <p id="clip" class="muted" hidden><b>CLIPPING:</b> lower your mic level</p>
@@ -53,7 +53,7 @@
         <p id="testMsg" class="muted">Record 5 seconds of your voice, then play it back through your current settings. Move the sliders or change the preset while it plays to hear the difference. Changing “Reduce background noise” needs a new test recording.</p>
       </div>
       <label class="chk"><input type="checkbox" id="ns" class="opt" checked> Reduce background noise</label>
-      <label class="chk"><input type="checkbox" id="ovl" class="opt" checked> On-screen recording bar (hidden from tab and window recordings)</label>
+      <label class="chk"><input type="checkbox" id="ovl" class="opt" checked> Floating controls (a small window that stays on top of everything, including other apps)</label>
       <p class="muted">Recordings stay in this browser until you download them. Clearing site data deletes them.</p>
     </div>
   </section>
