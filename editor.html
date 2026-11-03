@@ -1,28 +1,56 @@
 <!doctype html><meta charset="utf-8"><title>Editor · Screen Recorder Plus Plus</title>
 <link rel="icon" type="image/png" href="icons/icon-32.png?v=3">
 <link rel="stylesheet" href="style.css">
-<main>
-  <div class="tools"><img class="logo" src="icons/icon-128.png" alt="Screen Recorder ++"><button id="close">← Close editor</button></div>
-  <h1 id="title">Editor</h1>
+<main class="ed">
+  <header class="edbar">
+    <img class="logo" src="icons/icon-128.png" alt="Screen Recorder ++">
+    <h1 id="title">Editor</h1>
+    <button id="close" class="ib"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Close editor</button>
+  </header>
   <p id="nf" class="muted" hidden>Recording not found. It may have been deleted.</p>
-  <section id="editor" hidden>
-    <video id="v"></video>
-    <div id="tl"></div>
-    <p class="muted">Gray = kept · red = your voice muted · white = voiceover recorded</p>
-    <div class="player">
-      <button id="play" class="b-purple" aria-label="Play"></button><span id="clock" class="muted"></span><span class="sp"></span>
-      <button id="vol" class="b-blue" aria-label="Mute or unmute"></button><input type="range" id="volume" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+  <section id="editor" class="edgrid" hidden>
+    <div class="edmain">
+      <video id="v"></video>
+      <div id="tl"></div>
+      <p class="muted legend">Gray = kept · red = your voice muted · white = voiceover recorded</p>
+      <div class="player">
+        <button id="play" class="b-purple" aria-label="Play"></button>
+        <button id="back5" class="ib" title="Back 5 seconds" aria-label="Back 5 seconds"><svg class="i" viewBox="0 0 24 24"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button>
+        <button id="fwd5" class="ib" title="Forward 5 seconds" aria-label="Forward 5 seconds"><svg class="i" viewBox="0 0 24 24"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg></button>
+        <span id="clock" class="muted"></span><span class="sp"></span>
+        <button id="vol" class="b-blue" aria-label="Mute or unmute"></button><input type="range" id="volume" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+      </div>
+      <p class="muted">Shortcuts: Space play/pause · I set start · O set end</p>
     </div>
-    <div class="tools">
-      <button id="setIn" class="b-blue">Set start here</button><button id="setOut" class="b-blue">Set end here</button><button id="reset">Reset trim</button>
-      <span id="trimInfo" class="muted"></span>
-    </div>
-    <div class="tools"><button id="muteBtn" class="b-orange">Mute my voice from here</button></div>
-    <div id="mutes"></div>
-    <div id="recbar" class="row" hidden><span>Recording voiceover. Use headphones.</span><button id="stopvo" class="b-pink">Stop</button></div>
-    <p><button id="export" class="primary">Export edited MP4</button> <button id="dl" class="b-green" hidden>Download edited MP4</button> <button id="micdl" class="b-purple" hidden>Download mic audio</button> <span id="prog" class="muted"></span></p>
-    <p class="muted">Export plays the video in real time, so keep this tab open and visible until it finishes. The edited video is also saved to your library.</p>
-    <video id="xv" hidden></video>
+    <aside class="edside">
+      <section class="card">
+        <h2><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg>Trim</h2>
+        <div class="tools">
+          <button id="setIn" class="b-blue ib" title="Set start at the playhead (I)"><svg class="i" viewBox="0 0 24 24"><path d="M5 4v16M9 7.5l9 4.5-9 4.5z"/></svg>Set start</button>
+          <button id="setOut" class="b-blue ib" title="Set end at the playhead (O)"><svg class="i" viewBox="0 0 24 24"><path d="M19 4v16M15 7.5L6 12l9 4.5z"/></svg>Set end</button>
+          <button id="reset" class="ib" title="Reset trim"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Reset</button>
+        </div>
+        <p class="chip"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span id="trimInfo"></span></p>
+      </section>
+      <section class="card">
+        <h2><svg class="i" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M3 3l18 18"/></svg>Mute and voiceover</h2>
+        <button id="muteBtn" class="b-orange ib"><svg class="i" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M3 3l18 18"/></svg><span>Mute my voice from here</span></button>
+        <div id="mutes"></div>
+        <div id="recbar" class="row" hidden><span>Recording voiceover. Use headphones.</span><button id="stopvo" class="b-pink ib"><svg class="i" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Stop</button></div>
+        <p class="muted">Play to where your voice should stop, press the button, play to where it should come back, press it again. Then record a replacement over that section.</p>
+      </section>
+      <section class="card">
+        <h2><svg class="i" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg>Export</h2>
+        <button id="export" class="primary ib"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>Export edited MP4</button>
+        <div class="tools">
+          <button id="dl" class="b-green ib" hidden><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Download edited MP4</button>
+          <button id="micdl" class="b-purple ib" hidden><svg class="i" viewBox="0 0 24 24"><path d="M4 11v2M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>Download mic audio</button>
+        </div>
+        <p id="prog" class="muted"></p>
+        <p class="muted">Export plays the video in real time, so keep this tab open and visible until it finishes. The edited video is also saved to your library.</p>
+        <video id="xv" hidden></video>
+      </section>
+    </aside>
   </section>
 </main>
 <script type="module" src="editor.js"></script>

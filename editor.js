@@ -2,7 +2,12 @@ import { getFile, root, meta, save, mp4, writer, fmt } from './shared.js';
 const $ = s => document.querySelector(s), v = $('#v');
 const safe = s => s.replace(/[^\w -]+/g, '_');
 const CLS = { 'Record over': 'b-orange', 'Re-record': 'b-orange', Remove: 'b-pink' };
-const btn = (t, f) => Object.assign(document.createElement('button'), { textContent: t, onclick: f, className: CLS[t] || '' });
+const svg = d => '<svg class="i" viewBox="0 0 24 24">' + d + '</svg>';
+const ICONS = { 'Record over': svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'), 'Re-record': svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>'), Remove: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>') };
+const btn = (t, f) => {
+  const b = Object.assign(document.createElement('button'), { onclick: f, className: (CLS[t] || '') + ' ib' });
+  b.innerHTML = (ICONS[t] || '') + '<span></span>'; b.lastChild.textContent = t; return b;
+};
 let E = null, muteStart = null;
 
 function closeEditor() {
@@ -76,9 +81,9 @@ $('#setOut').onclick = () => { E.trim[1] = Math.max(v.currentTime, E.trim[0] + .
 $('#reset').onclick = () => { E.trim = [0, E.dur]; render(); };
 $('#muteBtn').onclick = () => {
   const t = v.currentTime, b = $('#muteBtn');
-  if (muteStart === null) { muteStart = t; b.textContent = 'End mute here'; return; }
+  if (muteStart === null) { muteStart = t; b.lastElementChild.textContent = 'End mute here'; return; }
   if (t - muteStart > .2) E.mutes.push({ s: muteStart, e: t });
-  E.mutes.sort((x, y) => x.s - y.s); muteStart = null; b.textContent = 'Mute my voice from here'; render();
+  E.mutes.sort((x, y) => x.s - y.s); muteStart = null; b.lastElementChild.textContent = 'Mute my voice from here'; render();
 };
 
 async function recordOver(mu) {
@@ -135,6 +140,14 @@ $('#export').onclick = async () => {
   await Promise.all([xv.play(), ...tr.map(([el]) => el.play())]);
 };
 
+$('#back5').onclick = () => { v.currentTime = Math.max(0, v.currentTime - 5); };
+$('#fwd5').onclick = () => { v.currentTime = Math.min(E?.dur || 0, v.currentTime + 5); };
+addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  if (!E || /^(INPUT|SELECT|TEXTAREA)$/.test(tag)) return;
+  if (e.code === 'Space' && tag !== 'BUTTON') { e.preventDefault(); v.paused ? v.play() : v.pause(); }
+  else if (e.key === 'i') $('#setIn').click(); else if (e.key === 'o') $('#setOut').click();
+});
 $('#close').onclick = () => window.close();
 const id = new URLSearchParams(location.search).get('id');
 chrome.storage.local.get('rec_' + id).then(r => r['rec_' + id] ? edit(r['rec_' + id]) : ($('#nf').hidden = false));

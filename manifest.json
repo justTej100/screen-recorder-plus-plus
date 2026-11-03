@@ -54,5 +54,16 @@
   },
   "host_permissions": [
     "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "bubble.html",
+        "bubble.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ]
 }

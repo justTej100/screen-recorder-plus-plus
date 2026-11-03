@@ -53,7 +53,7 @@ function buildAudio(ctx, mic, sysTracks) {
 
 // Elapsed time excludes paused time. The same numbers go to the on-screen bar (overlay.js) via storage.
 const elapsed = () => S.accum + (S.paused ? 0 : (Date.now() - S.last) / 1000);
-const publish = () => chrome.storage.local.set({ live: { status: S.paused ? 'paused' : 'recording', accum: S.accum, last: S.last, overlay: !!S.useOverlay } });
+const publish = () => chrome.storage.local.set({ live: { status: S.paused ? 'paused' : 'recording', accum: S.accum, last: S.last, overlay: !!S.useOverlay, bubble: !!S.cam && (S.surface === 'browser' || S.surface === 'window') } });
 
 $('#rec').onclick = start;
 $('#pause').onclick = () => pause(!S.paused);
@@ -137,7 +137,7 @@ async function start() {
   if (!mp4()) return say('This browser can’t record MP4. Update Chrome, Brave or Edge.');
   let screen, mic = null, cam = null;
   try {
-    screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30, displaySurface: $('#surf').value }, audio: $('#sys').value === 'on' });
+    screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true });
     if ($('#mic').value === 'on') mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: $('#ns').checked, autoGainControl: false, channelCount: 1, sampleRate: 48000 } });
     if ($('#cam').value === 'on') cam = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
   } catch (e) { screen?.getTracks().forEach(t => t.stop()); mic?.getTracks().forEach(t => t.stop()); return say('Couldn’t start: ' + e.message); }
@@ -152,8 +152,8 @@ async function start() {
   ticker.onmessage = () => {
     if (++n % 8 === 0 && S) tickUI();   // worker-driven, so the timer keeps updating while this tab is in the background
     g.drawImage(sv, 0, 0, W, H);
-    const p = S?.useOverlay && S.pill && S.pill[S.surface === 'browser' ? 'v' : S.surface === 'window' ? 'wnd' : ''];
-    if (p) {   // the on-screen bar is part of the page, so paint over it by stretching the pixels just beside it
+    const k = S?.useOverlay && S.pill && (S.surface === 'browser' ? 'v' : S.surface === 'window' ? 'wnd' : '');
+    if (k) for (const p of [S.pill[k], S.pill.bub?.[k]]) if (p) {   // the on-screen bar and camera bubble are part of the page, so paint over them by stretching the pixels just beside them
       const x = Math.max(0, Math.floor(p.l * W) - 8), y = Math.max(0, Math.floor(p.t * H) - 8), w = Math.min(W - x, Math.ceil(p.w * W) + 16), h = Math.min(H - y, Math.ceil(p.h * H) + 16);
       g.drawImage(g.canvas, x > 3 ? x - 3 : Math.min(W - 1, x + w + 3), y, 1, h, x, y, w, h);
     }
